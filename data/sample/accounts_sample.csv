@@ -1,0 +1,16 @@
+account_id,account_name,region_id,product_line,annual_revenue_inr,complexity_score,acquisition_year
+A0001,"Choudhury, Bakshi and Maharaj",R05,Bulk Material Handling,619996.0,2,2021
+A0002,Kapoor and Sons,R05,Conveyor Systems,589154.0,1,2021
+A0003,"Chaudry, Chahal and Sami",R01,Elevator Systems,1377131.0,2,2021
+A0004,Balan Inc,R03,Conveyor Systems,1272704.0,4,2019
+A0005,Kaul PLC,R02,Conveyor Systems,246420.0,3,2022
+A0006,"Bala, Issac and Saini",R06,Bulk Material Handling,483106.0,3,2024
+A0007,Sen PLC,R04,Conveyor Systems,197009.0,3,2023
+A0008,Ahuja-Dutta,R05,Conveyor Systems,352661.0,1,2022
+A0009,"Sami, Oak and Mall",R03,Conveyor Systems,201283.0,3,2022
+A0010,Kale LLC,R02,Elevator Systems,1484082.0,3,2022
+A0011,Chanda Group,R03,Bulk Material Handling,479056.0,4,2020
+A0012,Parmer LLC,R01,Dumb Waiter (New Product),283798.0,4,2024
+A0013,"Lalla, Bassi and Sharaf",R05,Conveyor Systems,1011051.0,1,2020
+A0014,"Dash, Radhakrishnan and Brar",R04,Conveyor Systems,48957.0,2,2023
+A0015,"Memon, Pathak and Handa",R05,Conveyor Systems,56362.0,1,2023
