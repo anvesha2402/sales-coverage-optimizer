@@ -55,6 +55,24 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "generated")
 st.set_page_config(page_title="Sales Coverage & GTM Structure Optimizer", layout="wide")
 
 
+def ensure_data_generated():
+    """
+    data/generated/ is gitignored on purpose (it's regenerable synthetic
+    data, not something to keep in version control) -- so a fresh deploy
+    (e.g. Streamlit Community Cloud pulling straight from GitHub) won't
+    have it yet. Generate it once, on first run, with the same seed used
+    everywhere else in this project, so results match exactly.
+    """
+    if os.path.exists(os.path.join(DATA_DIR, "accounts.csv")):
+        return
+    import subprocess
+    generator_path = os.path.join(os.path.dirname(__file__), "..", "data", "generate_synthetic_company.py")
+    subprocess.run([sys.executable, generator_path], check=True)
+
+
+ensure_data_generated()
+
+
 @st.cache_data
 def load_base_data():
     accounts_df = pd.read_csv(os.path.join(DATA_DIR, "accounts.csv"))
