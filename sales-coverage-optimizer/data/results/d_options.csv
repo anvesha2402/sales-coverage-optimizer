@@ -1,0 +1,10 @@
+case,option,accounts_won_24m,contribution_24m_inr_m,payback_month_vs_existing
+low,Existing sales force,44.0,-1.7895301196190458,0.0
+low,Dedicated pod,74.25,-3.7213639985333336,
+low,Channel partners,40.0,-0.9863306905925925,14.0
+base,Existing sales force,65.99999999999999,0.6565817094603184,0.0
+base,Dedicated pod,126.49999999999997,0.5183500443703699,
+base,Channel partners,86.0,1.6918864768148145,12.0
+high,Existing sales force,88.0,3.1026935385396834,0.0
+high,Dedicated pod,193.01333333333332,5.6324628001155554,4.0
+high,Channel partners,135.0,4.849672952666667,8.0

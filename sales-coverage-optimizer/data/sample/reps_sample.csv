@@ -1,0 +1,16 @@
+rep_id,rep_name,region_id,specialization,annual_cost_inr,tenure_years,hire_year
+REP001,Saksham Yohannan,R01,Generalist,1099559.0,1,2023
+REP002,Anita Devan,R01,Bulk Material Handling,1015733.0,0,2024
+REP003,Wriddhish Kibe,R01,Elevator Systems,1158334.0,3,2021
+REP004,Upkaar Kaul,R01,Generalist,1164933.0,4,2020
+REP005,Harish Sachdev,R01,Conveyor Systems,1144641.0,3,2021
+REP006,Urmi Chaudhry,R01,Generalist,1110810.0,2,2022
+REP007,Abdul Dugar,R01,Conveyor Systems,1241718.0,5,2019
+REP008,Vamakshi Sood,R02,Generalist,1055993.0,4,2020
+REP009,Bhavna Nagi,R02,Elevator Systems,1151977.0,6,2018
+REP010,Daniel Chakraborty,R02,Conveyor Systems,990318.0,2,2022
+REP011,Baljiwan Gill,R02,Generalist,960054.0,1,2023
+REP012,Patrick Bansal,R02,Conveyor Systems,1044153.0,3,2021
+REP013,Warhi Grewal,R02,Conveyor Systems,1022243.0,3,2021
+REP014,Baljiwan Andra,R02,Generalist,1007082.0,3,2021
+REP015,Hredhaan Nayak,R02,Elevator Systems,1105228.0,5,2019

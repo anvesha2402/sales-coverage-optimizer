@@ -1,0 +1,7 @@
+region_id,region_name,state,complexity_index
+R01,Delhi NCR,Delhi,3
+R02,Haryana Belt,Haryana,5
+R03,Maharashtra West,Maharashtra,4
+R04,Gujarat Industrial Corridor,Gujarat,3
+R05,Karnataka South,Karnataka,2
+R06,Tamil Nadu Coastal,Tamil Nadu,3
