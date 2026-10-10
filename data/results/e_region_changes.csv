@@ -1,7 +1,7 @@
 region_id,region,reps_today,reps_needed,accounts,complex_accounts,accounts_changing_owner,change
-R01,Delhi NCR,7,7,100,6,29,0
-R02,Haryana Belt,11,13,166,121,88,2
-R03,Maharashtra West,12,9,137,38,51,-3
-R04,Gujarat Industrial Corridor,8,5,83,4,24,-3
-R05,Karnataka South,6,4,59,0,21,-2
+R01,Delhi NCR,7,7,100,6,31,0
+R02,Haryana Belt,11,13,166,121,86,2
+R03,Maharashtra West,12,9,137,38,52,-3
+R04,Gujarat Industrial Corridor,8,5,83,4,22,-3
+R05,Karnataka South,6,4,59,0,23,-2
 R06,Tamil Nadu Coastal,12,7,105,6,34,-5

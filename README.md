@@ -10,8 +10,8 @@ every planning cycle.
 
 On the synthetic dataset:
 - The redesign takes the sales force from **56 to 45 reps** and cuts cost
-  to serve by **18% (₹12.2M a year)**.
-- The change itself costs **₹4.5M** and **pays back in month 6**.
+  to serve by **18% (₹12.3M a year)**.
+- The change itself costs **₹4.6M** and **pays back in month 6**.
 - **Haryana is understaffed** even though the company as a whole is
   overstaffed.
 - An early-warning ratio flags the margin problem **2 years before** it
@@ -41,11 +41,11 @@ Modules A, B and D live from sliders.
 
 | # | Question | Answer |
 |---|---|---|
-| A | Is sales cost outrunning growth? | **Yes.** Headcount 3.5× vs revenue 2.1×; net margin 11.6% → 1.2%. The warning fires in **2020**, and margin breaches in **2022**. On 200 histories it was not tuned on: 99% of breaches caught, 24% false alarms. Watching revenue caught 34% |
-| B | Which structure covers the book at the lowest total cost? | **Geographic, with accounts matched to in-region product expertise.** Product Specialist costs ~29% more once travel is priced. The Hybrid ties Geographic in 73% of 100 generated datasets but rarely beats it |
-| C | How many reps, and who owns what? | **45 (from 56):** 2 relocated *into* Haryana, 13 fewer elsewhere (net −11). Today one Haryana rep carries 223% of their selling hours. The optimiser beats a greedy rule by 3.6% on cost and moves 247 accounts instead of 558 |
-| D | How should the new product (Dumb Waiter) be sold? | **Channel partners** (lift dealers), managed by one redeployed rep. A dedicated pod would need a 29% win rate (25% assumed) to compete |
-| $ | Does the redesign pay? | **₹12.2M a year saved, ₹4.5M one-time cost, payback month 6** (month 8–10 pessimistic). Cost to serve falls from 21.4% to 17.5% of revenue |
+| A | Is sales cost outrunning growth? | **Yes.** Headcount 3.5× vs revenue 2.1×; net margin 11.6% → 1.2%. The warning fires in **2020**, and margin breaches in **2022** (99% of breaches caught on 200 test histories, 24% false alarms). Revenue per rep fell 40%, all of it from reps covering 46% fewer accounts. Operating leverage rose from 1.6 to 14 |
+| B | Which structure covers the book at the lowest total cost? | **Geographic, with engineering-led accounts matched to in-region product expertise.** Product Specialist costs ~25% more once travel is priced. The Hybrid ties Geographic in 65% of 100 generated datasets but rarely beats it |
+| C | How many reps, and who owns what? | **45 (from 56):** 2 relocated *into* Haryana, 13 fewer elsewhere (net −11). Haryana is the one binding constraint (₹978 per extra selling hour today, ₹0 in most regions). The optimiser beats a greedy rule by 7% on cost and moves 248 accounts instead of 548 |
+| D | How should the new product (Dumb Waiter) be sold? | **Channel partners** (~8 lift dealers), managed by one redeployed rep. They also lead on buyers' service needs. The reachable market (~61 units a year) caps a pod's extra capacity. Price is ~₹0.8 lakh below the competitor median; at +20% the pod and partners draw level |
+| $ | Does the redesign pay? | **₹12.3M a year saved, ₹4.6M one-time cost, payback month 6** (month 8–10 pessimistic). Cost to serve falls from 21.4% to 17.5% of revenue |
 
 Full reasoning: [`docs/business_insights.md`](docs/business_insights.md).
 Rollout sequence and KPIs: [`docs/rollout_plan.md`](docs/rollout_plan.md).
@@ -68,6 +68,23 @@ Rollout sequence and KPIs: [`docs/rollout_plan.md`](docs/rollout_plan.md).
     (38–56 reps).
 - **Results that went against the original hypothesis are kept.** The
   hybrid structure does not win. The dedicated pod does not pay.
+
+## Frameworks, and where each one changes a number
+
+| Framework | Module | What it decides |
+|---|---|---|
+| Workload build-up (sales-force sizing) | C | How many reps the book needs |
+| Revenue decomposition (reps × accounts per rep × revenue per account) | A | Why revenue per rep fell |
+| Operating leverage | A | Why margin fell faster than costs rose; the case for variable pay |
+| Sales coverage architecture (geographic / specialist / hybrid) | B | Which structure |
+| Mixed-integer optimisation + shadow prices (Theory of Constraints) | C | Who owns what; where the bottleneck is |
+| B2B buying centre | B, C, D | Which accounts need an expert; how different the new buyer is |
+| Service output demands, trade terms, push vs pull | D | Which channel fits the buyer; dealer terms; the architect pull option |
+| TAM / SAM / SOM, distribution intensity | D | Caps on every option's volume; how many dealers |
+| EVC pricing | D | Price headroom vs. competitors |
+
+Frameworks considered and left out because they would change nothing here
+are listed in `docs/business_insights.md`.
 
 ## Tech stack
 
@@ -117,6 +134,7 @@ sales-coverage-optimizer/
 ├─ data/
 │  ├─ generate_synthetic_company.py
 │  ├─ data_dictionary.md
+│  ├─ market_sizing.csv         TAM/SAM/SOM inputs with sources
 │  ├─ sample/                   CSV previews (full set is generated)
 │  └─ results/                  every module's output (committed)
 ├─ src/

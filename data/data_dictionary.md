@@ -27,6 +27,7 @@ Pipeline outputs (results of every module) are in `data/results/`.
 | `complexity_score` | int 1–5 | Industrial accounts follow their region's complexity; Dumb Waiter is standardised (mostly 1–2) |
 | `deal_cycle_days` | int | First meeting to order, CRM-style field. Industrial lines ~80–105 days; Dumb Waiter ~45 |
 | `acquisition_year` | int | 2019–2024; all Dumb Waiter accounts are 2024 pilot customers |
+| `buying_centre` | string | Roles in the buying decision, `; `-separated. Industrial: plant head, procurement, engineering (complex accounts), finance (large orders). Dumb Waiter: project manager, architect, owner/developer, owner/GM, F&B head, facility manager, procurement, administrator. Accounts with engineering in the buying centre need a product expert (Modules B, C) |
 | `current_rep_id` | string | FK → reps. Today's owner: a same-region rep, product-matched 70% of the time when possible. The as-is baseline for Module C |
 
 ## reps.csv (56 rows) — today's sales force
@@ -57,12 +58,26 @@ against 2.1× revenue. The real case runs the other way.
 | `net_income_inr_m` | Net margin falls from ~12% (2019) to ~1% (2024) |
 | `sales_headcount` | 16 → 56; 2024 equals `len(reps.csv)` |
 
+## yearly_accounts.csv (6 rows, 2019–2024)
+
+| Column | Description |
+|---|---|
+| `active_accounts` | Accounts served that year; 345 (2019) → 650 (2024) |
+| `accounts_won`, `accounts_lost` | Flows; 6% of the prior year's book is lost each year |
+
+Feeds Module A's decomposition: revenue per rep = accounts per rep × revenue per account.
+
+## market_sizing.csv (Module D)
+
+One row per sizing step, with `value_low` / `value_base` / `value_high`, the
+unit, how it was built, and a source URL or "Assumption".
+
 ## Traceability to the five questions
 
 | Question | Tables used |
 |---|---|
-| A — is sales cost outrunning growth? | `yearly_financials` |
+| A — is sales cost outrunning growth? | `yearly_financials`, `yearly_accounts` |
 | B — which structure? | `accounts` (region, product, complexity, revenue) + `reps` (region, background, cost) |
 | C — how many reps, who owns what? | Same, plus `accounts.current_rep_id` for the as-is baseline and the continuity charge |
-| D — how to sell the new product? | `accounts` filtered to the Dumb Waiter vs. the rest (buyer segment, region, ticket, complexity, deal cycle) |
+| D — how to sell the new product? | `accounts` filtered to the Dumb Waiter vs. the rest (buying centre, complexity, deal cycle, ticket), plus `market_sizing.csv` |
 | Economics | Results of C and D, plus `yearly_financials` (final year) |

@@ -164,7 +164,7 @@ def as_is(accounts_df, reps_df, selling_hours=A.SELLING_HOURS_PER_REP):
         "expertise_risk_inr_m": risk[owner, cols].sum() / 1e6,
         "uncovered_margin_inr_m": 0.0,
         "revenue_covered": 1.0,
-        "complex_accounts_with_expert": matched[owner[acc["is_complex"].values], cols[acc["is_complex"].values]].mean(),
+        "expert_coverage": matched[owner[acc["needs_expert"].values], cols[acc["needs_expert"].values]].mean(),
         "utilisation_min": load.min(), "utilisation_max": load.max(),
         "reps_over_capacity": int((load > 1.0).sum()),
         "reps_under_half_loaded": int((load < A.MIN_UTILISATION).sum()),
@@ -204,6 +204,84 @@ def compare(accounts_path="data/generated/accounts.csv", reps_path="data/generat
     return {"structure": structure, "table": table, "assignment": assignment}
 
 
+def _assignment_lp(acc, reps_df, keep, hours, cost, elig, cap_hours):
+    """Continuous assignment of accounts to the kept reps, with uncovered
+    accounts costed at their lost gross margin. Returns objective (INR) and
+    the value of one extra selling hour for each kept rep (from the duals of
+    the capacity constraints)."""
+    prob = pulp.LpProblem("assign_lp", pulp.LpMinimize)
+    margin = acc["annual_revenue_inr"].values * A.GROSS_MARGIN
+    x = {(i, j): pulp.LpVariable(f"x_{i}_{j}", 0, 1) for i in keep for j in range(len(acc)) if elig[i, j]}
+    u = {j: pulp.LpVariable(f"u_{j}", 0, 1) for j in range(len(acc))}
+    prob += pulp.lpSum(cost[i, j] * v for (i, j), v in x.items()) + pulp.lpSum(margin[j] * u[j] for j in u)
+    by_acc = {j: [u[j]] for j in u}
+    by_rep = {i: [] for i in keep}
+    for (i, j), v in x.items():
+        by_acc[j].append(v)
+        by_rep[i].append(hours[i, j] * v)
+    for j, terms in by_acc.items():
+        prob += pulp.lpSum(terms) == 1
+    for i in keep:
+        prob += pulp.lpSum(by_rep[i]) <= cap_hours, f"cap_{i}"
+    prob.solve(pulp.PULP_CBC_CMD(msg=0))
+    duals = {i: -(prob.constraints[f"cap_{i}"].pi or 0.0) for i in keep}
+    return pulp.value(prob.objective), duals
+
+
+def bottleneck_values(accounts_df, reps_df, structure="Geographic", kept_owner=None,
+                      selling_hours=A.SELLING_HOURS_PER_REP):
+    """Theory-of-Constraints view: where is capacity the binding constraint?
+
+    For each region, reports
+      * value_per_extra_hour_inr: the shadow price of rep capacity -- how much
+        total cost (travel + expertise risk + margin on uncovered accounts)
+        would fall with one more selling hour there. Read from the duals of
+        a continuous assignment over the kept reps (shadow prices are not
+        defined for the integer problem, so keep/release decisions are fixed
+        first; standard practice).
+      * value_of_one_more_rep_inr: cross-check without duals -- re-solve with
+        one extra rep in that region (cost of that rep NOT netted off).
+      * hours_short: workload left uncovered in that region.
+    Run twice: on today's 56 reps, and on the redesigned team (kept_owner)."""
+    acc = B.prepare_accounts(accounts_df)
+    reps_df = reps_df.reset_index(drop=True)
+    if kept_owner is not None:
+        reps_df = with_transfer_slots(reps_df)
+    skills, elig = B.design_structure(structure, acc, reps_df)
+    hours, travel, risk, _ = B.pair_matrices(acc, reps_df, rep_skill=skills)
+    cost = travel + risk
+    if kept_owner is None:
+        keep = [i for i in range(len(reps_df)) if not str(reps_df["rep_id"].iloc[i]).startswith("XFER")]
+    else:
+        keep = sorted(set(int(i) for i in kept_owner if i >= 0))
+    cap = selling_hours * A.MAX_UTILISATION
+    base_obj, duals = _assignment_lp(acc, reps_df, keep, hours, cost, elig, cap)
+
+    rows = []
+    for r in sorted(acc["region_id"].unique()):
+        in_r = [i for i in keep if reps_df["region_id"].iloc[i] == r]
+        # cross-check: clone the region's average rep as one extra rep
+        extra = reps_df.iloc[[in_r[0]]].copy()
+        extra["rep_id"] = f"EXTRA-{r}"
+        extra["specialization"] = "Generalist"
+        r2 = pd.concat([reps_df, extra], ignore_index=True)
+        sk2, el2 = B.design_structure(structure, acc, r2)
+        h2, t2, k2, _ = B.pair_matrices(acc, r2, rep_skill=sk2)
+        obj2, _ = _assignment_lp(acc, r2, keep + [len(r2) - 1], h2, t2 + k2, el2, cap)
+        need = acc.loc[acc["region_id"] == r, "base_hours"].sum() + \
+            (acc.loc[acc["region_id"] == r, "visits"] * A.SAME_REGION_TRAVEL_HOURS).sum()
+        rows.append({
+            "region_id": r,
+            "reps": len(in_r),
+            "workload_hours": need,
+            "capacity_hours": len(in_r) * cap,
+            "hours_short": max(0.0, need - len(in_r) * cap),
+            "value_per_extra_hour_inr": max(duals[i] for i in in_r) if in_r else None,
+            "value_of_one_more_rep_inr": base_obj - obj2,
+        })
+    return pd.DataFrame(rows)
+
+
 def capacity_what_if(accounts_path="data/generated/accounts.csv", reps_path="data/generated/reps.csv",
                      structure="Geographic", hours_grid=(750, 850, 990, 1100, 1200)):
     accounts_df, reps_df = pd.read_csv(accounts_path), pd.read_csv(reps_path)
@@ -224,7 +302,7 @@ if __name__ == "__main__":
     print("Structure optimised:", r["structure"])
     cols = ["method", "reps_used", "payroll_inr_m", "travel_inr_m", "expertise_risk_inr_m",
             "uncovered_margin_inr_m", "total_cost_inr_m", "accounts_moved", "utilisation_min",
-            "utilisation_max", "complex_accounts_with_expert"]
+            "utilisation_max", "expert_coverage"]
     print(r["table"][cols].round(3).to_string(index=False))
     print(r["table"][["method", "solve_seconds", "solver_status", "regions_short_of_capacity",
                       "transfers_by_region", "existing_reps_freed"]].to_string(index=False))

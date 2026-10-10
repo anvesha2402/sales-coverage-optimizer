@@ -228,6 +228,61 @@ def build_yearly_financials(rng, reps_df):
     })
 
 
+ACCOUNT_CHURN_PER_YEAR = 0.06
+
+
+def build_yearly_accounts(rng, financials_df, final_accounts):
+    """Active accounts by year, with accounts won and lost. The book grows a
+    little slower than revenue (accounts deepen over time), ending at the
+    current 650. Drawn AFTER the other tables so adding it leaves them
+    unchanged."""
+    rev = financials_df["revenue_inr_m"].values
+    active = np.round(final_accounts * (rev / rev[-1]) ** 0.9 * (1 + rng.normal(0, 0.02, len(rev)))).astype(int)
+    active[-1] = final_accounts
+    lost = np.concatenate([[0], np.round(ACCOUNT_CHURN_PER_YEAR * active[:-1]).astype(int)])
+    won = np.concatenate([[0], active[1:] - active[:-1] + lost[1:]])
+    return pd.DataFrame({"year": financials_df["year"], "active_accounts": active,
+                         "accounts_won": won, "accounts_lost": lost})
+
+
+def build_buying_centres(rng, accounts_df):
+    """Who takes part in the buying decision, per account ('; '-separated).
+    Industrial orders: plant head + procurement, engineering whenever the
+    account is complex (always at complexity >= 4, 30% of the time at 3),
+    finance on large orders. Dumb Waiter orders are bought by a different
+    set of people: builders' project managers and architects, hotel owners
+    and F&B heads, hospital facility managers. Drawn last, so adding it
+    leaves every other column unchanged."""
+    big = accounts_df["annual_revenue_inr"].rank(pct=True) > 0.8
+    out = []
+    for (_, a), is_big in zip(accounts_df.iterrows(), big):
+        seg, cx = a["buyer_segment"], a["complexity_score"]
+        if a["product_line"] != NEW_PRODUCT:
+            roles = ["Plant head", "Procurement"]
+            if cx >= 4 or (cx == 3 and rng.random() < 0.3):
+                roles.append("Engineering")
+            if is_big or rng.random() < 0.2:
+                roles.append("Finance")
+        elif seg == "Builder / real estate":
+            roles = ["Project manager", "Architect"]
+            if rng.random() < 0.5:
+                roles.append("Owner / developer")
+            if rng.random() < 0.3:
+                roles.append("Procurement")
+        elif seg == "Hotel / restaurant":
+            roles = ["Owner / GM"]
+            if rng.random() < 0.8:
+                roles.append("F&B head")
+            if rng.random() < 0.6:
+                roles.append("Architect")
+        else:
+            roles = ["Facility manager", "Procurement"]
+            if rng.random() < 0.5:
+                roles.append("Administrator")
+        out.append("; ".join(roles))
+    return out
+
+
 def generate(seed=42, with_names=False):
     rng = np.random.default_rng(seed)
     regions = build_regions()
@@ -242,7 +297,10 @@ def generate(seed=42, with_names=False):
     reps = build_reps(rng, regions, accounts, rep_names)
     accounts = assign_current_owners(rng, accounts, reps)
     financials = build_yearly_financials(rng, reps)
-    return {"regions": regions, "accounts": accounts, "reps": reps, "yearly_financials": financials}
+    yearly_accounts = build_yearly_accounts(rng, financials, len(accounts))
+    accounts["buying_centre"] = build_buying_centres(rng, accounts)
+    return {"regions": regions, "accounts": accounts, "reps": reps, "yearly_financials": financials,
+            "yearly_accounts": yearly_accounts}
 
 
 def main():

@@ -11,7 +11,8 @@ What changed from the first version, and why:
     travel is the reason the real company went geographic in 2009. The old
     "specialization depth" score (100% / 0% by definition) is replaced by
     expertise risk: margin expected to be lost on complex accounts served
-    by someone without expertise in that product (the Haryana lesson).
+    by someone without expertise in that product (the Haryana lesson). An
+    account "needs an expert" when engineering sits in its buying centre.
   * Workload is in hours from the workload build-up in assumptions.py, not
     an invented 55-point cap.
   * The Hybrid is built from account segmentation (who handles complex
@@ -59,6 +60,13 @@ def prepare_accounts(accounts_df):
     df["visits"] = [A.visits_per_year(c, t) for c, t in zip(df["complexity_score"], df["tier"])]
     df["base_hours"] = df["visits"] * A.HOURS_PER_VISIT + A.ACCOUNT_ADMIN_HOURS_PER_YEAR
     df["is_complex"] = df["complexity_score"] >= A.COMPLEX_ACCOUNT_THRESHOLD
+    # B2B buying centre: an account needs a product expert when engineering
+    # sits in the buying decision -- that is who asks the technical questions
+    # the Haryana reps could not answer in 2009.
+    if "buying_centre" in df:
+        df["needs_expert"] = df["buying_centre"].str.contains("Engineering")
+    else:
+        df["needs_expert"] = df["is_complex"]
     return df.reset_index(drop=True)
 
 
@@ -80,7 +88,7 @@ def pair_matrices(acc, reps_df, travel_multiplier=1.0, expertise_loss=A.EXPERTIS
     travel = visits[None, :] * tc[rr][:, ar]
     skill = rep_skill if rep_skill is not None else reps_df["specialization"].to_numpy(dtype=object)
     matched = skill[:, None] == acc["product_line"].to_numpy(dtype=object)[None, :]
-    risk = (~matched) * acc["is_complex"].values[None, :] * (
+    risk = (~matched) * acc["needs_expert"].values[None, :] * (
         acc["annual_revenue_inr"].values[None, :] * A.GROSS_MARGIN * expertise_loss)
     return hours, travel, risk, matched
 
@@ -128,7 +136,7 @@ def design_structure(name, acc, reps_df, specialist_share=None):
         # Overlay size per product = complex-account workload / usable hours,
         # drawn from reps already skilled in that line, based where the
         # line's complex accounts concentrate.
-        complex_acc = acc[acc["is_complex"]]
+        complex_acc = acc[acc["needs_expert"]]
         avg_travel_extra = complex_acc["visits"].mean() * 4.0   # rough cross-region uplift
         hrs = complex_acc.groupby("product_line")["base_hours"].sum() + \
             complex_acc.groupby("product_line").size() * avg_travel_extra
@@ -142,7 +150,7 @@ def design_structure(name, acc, reps_df, specialist_share=None):
             cands = cands.sort_values(["heat", "tenure_years"], ascending=False)
             chosen = cands.index[:k]
             overlay[chosen] = True
-        is_complex = acc["is_complex"].values[None, :]
+        is_complex = acc["needs_expert"].values[None, :]
         # Overlay specialists take complex accounts of their line anywhere and
         # can still pick up any account in their home region; regional reps
         # cover their region, including complex accounts the overlay has no
@@ -197,7 +205,7 @@ def cost_assignment(acc, reps_df, owner, hours, travel, risk, matched, selling_h
     travel_cost = travel[owner[cols], cols].sum()
     risk_cost = risk[owner[cols], cols].sum()
     gap_cost = (acc["annual_revenue_inr"].values[~served] * A.GROSS_MARGIN).sum()
-    complex_served = served & acc["is_complex"].values
+    complex_served = served & acc["needs_expert"].values
     cx_cols = np.where(complex_served)[0]
     expert_share = matched[owner[cx_cols], cx_cols].mean() if len(cx_cols) else 1.0
     load = np.bincount(owner[served], weights=hours[owner[cols], cols], minlength=len(reps_df))[used]
@@ -210,7 +218,7 @@ def cost_assignment(acc, reps_df, owner, hours, travel, risk, matched, selling_h
         "uncovered_margin_inr_m": gap_cost / 1e6,
         "total_cost_inr_m": (payroll + travel_cost + risk_cost + gap_cost) / 1e6,
         "revenue_covered": rev[served].sum() / rev.sum(),
-        "complex_accounts_with_expert": expert_share,
+        "expert_coverage": expert_share,
         "utilisation_min": (load / selling_hours).min() if len(load) else 0.0,
         "utilisation_max": (load / selling_hours).max() if len(load) else 0.0,
     }
@@ -271,7 +279,7 @@ def robustness(n_runs=100):
         outright_win_share=("outright_win", "mean"),
         tied_best_share=("tied_best", "mean"),
         reps_mean=("reps_used", "mean"),
-        expert_share_mean=("complex_accounts_with_expert", "mean"),
+        expert_share_mean=("expert_coverage", "mean"),
     ).reindex(STRUCTURES)
     return runs, summary
 

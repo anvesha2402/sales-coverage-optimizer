@@ -83,6 +83,10 @@ def load():
         "transition": r("e_transition_costs.csv"),
         "payback": r("e_payback.csv"),
         "curves": r("e_payback_curves.csv"),
+        "decomp": r("a_decomposition.csv"),
+        "lev_whatif": r("a_leverage_what_if.csv"),
+        "bottleneck": r("c_bottleneck.csv"),
+        "sod": r("d_service_outputs.csv"),
     }
 
 
@@ -108,8 +112,8 @@ rev_mult = st.sidebar.slider("Revenue growth over 6 years (×)", 1.3, 3.5, 2.1, 
 hc_mult = st.sidebar.slider("Sales headcount growth over 6 years (×)", 1.0, 6.0, 3.5, 0.1)
 st.sidebar.caption("Module B — the two judgement-heavy inputs")
 travel_mult = st.sidebar.select_slider("Travel cost (× base)", [0.5, 0.75, 1.0, 1.5, 2.0], 1.0)
-expertise_loss = st.sidebar.slider("Margin lost on a complex account served by a non-expert", 0.0, 1.0, 0.10, 0.05,
-                                   format="%.2f")
+expertise_loss = st.sidebar.slider("Margin lost when an engineering-led account gets a non-expert rep",
+                                   0.0, 1.0, 0.10, 0.05, format="%.2f")
 st.sidebar.caption("Module D — new product")
 gi = S["D"]["inputs"]
 buyer_d = st.sidebar.slider("Buyer distance", 0.0, 1.0, round(gi["buyer_distance"], 2), 0.01)
@@ -117,6 +121,9 @@ cx_d = st.sidebar.slider("Technical-complexity distance", 0.0, 1.0, round(gi["co
 cyc_d = st.sidebar.slider("Deal-cycle distance", 0.0, 1.0, round(gi["deal_cycle_distance"], 2), 0.01)
 pod_wr = st.sidebar.slider("Pod win rate", 0.10, 0.50, 0.25, 0.01)
 partner_n = st.sidebar.slider("Channel-partner accounts a year", 12, 96, 48, 6)
+price_chg = st.sidebar.slider("Dumb Waiter price change (%)", -10, 40, 0, 5,
+                              help="Competitor median is about ₹2.5 lakh vs ₹1.66 lakh today. Assumes 10% fewer wins "
+                                   "for any price rise.")
 
 # ---------------------------------------------------------------------------
 # Header + KPI row
@@ -179,6 +186,35 @@ with ra:
     t["Warn when headcount runs ahead by"] = (t["Warn when headcount runs ahead by"] - 1).map("{:.0%}".format)
     st.dataframe(t.style.format({"Breaches caught": "{:.0%}", "False alarms": "{:.0%}"}),
                  hide_index=True, width="stretch")
+st.markdown("**Why did revenue per rep fall, and why did margin fall so fast?**")
+la2, ra2 = st.columns(2)
+with la2:
+    dc = data["decomp"]
+    fig = go.Figure()
+    for col, name, c in [("accounts_per_rep", "Accounts per rep", C1),
+                         ("revenue_per_account_inr_k", "Revenue per account", C2),
+                         ("revenue_per_rep_inr_m", "Revenue per rep", C3)]:
+        fig.add_trace(go.Scatter(x=dc["year"], y=dc[col] / dc[col].iloc[0] * 100, mode="lines+markers", name=name,
+                                 line=dict(color=c, width=2), marker=dict(size=8)))
+    style(fig, "Index, 2019 = 100").update_xaxes(dtick=1)
+    st.plotly_chart(fig, width="stretch")
+    ds = S["A"]["decomposition"]
+    st.caption(f"Revenue per rep fell {abs(ds['revenue_per_rep_change']):.0%}: each rep covers "
+               f"{abs(ds['accounts_per_rep_change']):.0%} fewer accounts, while revenue per account rose "
+               f"{ds['revenue_per_account_change']:.0%}. The customers didn't weaken; coverage thinned. "
+               "Win rate and repeat-order terms need deal-level data the dataset doesn't have.")
+with ra2:
+    fig = go.Figure(go.Scatter(x=yoy["year"], y=yoy["operating_leverage"], mode="lines+markers", name="Operating leverage",
+                               line=dict(color=C1, width=2), marker=dict(size=8)))
+    style(fig, "% profit change per 1% revenue change").update_xaxes(dtick=1)
+    st.plotly_chart(fig, width="stretch")
+    lw = data["lev_whatif"]
+    last = yoy.dropna(subset=["operating_leverage"]).iloc[-1]
+    st.caption(f"The whole sales cost scales with headcount, not revenue, so it acts as a fixed cost. In "
+               f"{int(last['year'])} a 10% revenue dip would cut operating profit by "
+               f"{abs(last['profit_change_if_revenue_falls_10pct']):.0%} (this scenario). Paying 20% / 40% of rep pay as "
+               f"commission would bring leverage down from {lw['operating_leverage'].iloc[0]:.1f} to "
+               f"{lw['operating_leverage'].iloc[1]:.1f} / {lw['operating_leverage'].iloc[2]:.1f} (dataset).")
 st.divider()
 
 # ---------------------------------------------------------------------------
@@ -212,7 +248,7 @@ st.dataframe(pd.DataFrame({
     "Cheapest outright": rob["outright_win_share"].map("{:.0%}".format),
     "Tied for cheapest (within 1%)": rob["tied_best_share"].map("{:.0%}".format),
     "Avg reps needed": rob["reps_mean"].round(1),
-    "Complex accounts with expert": rob["expert_share_mean"].map("{:.0%}".format),
+    "Engineering-led accounts with expert": rob["expert_share_mean"].map("{:.0%}".format),
 }), hide_index=True, width="stretch")
 with st.expander("Which structure wins as travel cost and expertise loss move"):
     g = data["grid"].pivot(index="expertise_loss", columns="travel_multiplier", values="winner")
@@ -232,7 +268,7 @@ show = pd.DataFrame({
     "Payroll ₹M": cmp_["payroll_inr_m"].round(1),
     "Accounts changing owner": cmp_["accounts_moved"],
     "Rep load range": [f"{a:.0%}–{b:.0%}" for a, b in zip(cmp_["utilisation_min"], cmp_["utilisation_max"])],
-    "Complex accounts with expert": cmp_["complex_accounts_with_expert"].map("{:.0%}".format),
+    "Engineering-led accounts with expert": cmp_["expert_coverage"].map("{:.0%}".format),
 })
 st.dataframe(show, hide_index=True, width="stretch")
 st.caption("As-is = today's owners, every rep paid. Greedy = the simple fill-the-cheapest-rep-first rule. "
@@ -256,6 +292,30 @@ with rc:
     fig.update_layout(barmode="group", hovermode="closest")
     st.markdown("**Reps by region: today vs. needed**")
     st.plotly_chart(style(fig, "Reps"), width="stretch")
+bn = data["bottleneck"]
+lb2, rb2 = st.columns([3, 2])
+with lb2:
+    fig = go.Figure()
+    for when, c in [("Today", C1), ("After redesign", C2)]:
+        sub = bn[bn["when"] == when]
+        fig.add_trace(go.Bar(x=sub["region_id"].map(dict(zip(reg["region_id"], reg["region"]))),
+                             y=sub["value_per_extra_hour_inr"].clip(lower=0), name=when, marker_color=c,
+                             marker_line=dict(color="white", width=2)))
+    fig.update_layout(barmode="group", hovermode="closest")
+    st.markdown("**Where capacity is the constraint: value of one more selling hour (₹)**")
+    st.plotly_chart(style(fig, "₹ per extra selling hour"), width="stretch")
+with rb2:
+    t = bn[(bn["when"] == "Today") & (bn["hours_short"] > 0)]
+    if len(t):
+        row = t.iloc[0]
+        name = dict(zip(reg["region_id"], reg["region"]))[row["region_id"]]
+        st.markdown(f"**Theory of Constraints view.** Today only **{name}** is constrained: "
+                    f"{row['hours_short']:,.0f} hours short, and an extra hour there is worth "
+                    f"₹{row['value_per_extra_hour_inr']:,.0f}. Every other region has slack (value ₹0). "
+                    "The redesign relocates reps into it, which relieves the constraint.")
+        st.caption(f"Caveat: one more rep there recovers about ₹{row['value_of_one_more_rep_inr'] / 1e5:.1f} lakh "
+                   "of margin a year, less than a rep costs. Relocating is justified by the policy of covering "
+                   "every account; the alternative is serving the region's smallest accounts by phone.")
 st.divider()
 
 # ---------------------------------------------------------------------------
@@ -264,8 +324,10 @@ st.divider()
 st.subheader("D · How should the Dumb Waiter be sold?")
 fit = D.fit_score(buyer_d, cx_d, cyc_d)
 inputs = dict(gi)
-cf, won = D.option_cashflows(inputs, "base", avg_rep_cost,
-                             overrides={"pod_win_rate": pod_wr, "partner_accounts_per_year": partner_n})
+pf = 1 + price_chg / 100
+cf, won, capped = D.option_cashflows(inputs, "base", avg_rep_cost,
+                                     overrides={"pod_win_rate": pod_wr, "partner_accounts_per_year": partner_n},
+                                     price_factor=pf, win_factor=0.9 if price_chg > 0 else 1.0)
 ld, rd = st.columns([2, 3])
 with ld:
     poor = fit["score"] >= D.FIT_THRESHOLD
@@ -275,20 +337,65 @@ with ld:
                 f"font-weight:600'>{'⚠ ' if poor else '✓ '}{fit['verdict']}</div>", unsafe_allow_html=True)
     st.caption("The fit score says whether to take the product out of the generalists' bag. "
                "The economics on the right say where to put it.")
-    totals = {o: cf[o].sum() / 1e6 for o in ("Existing sales force", "Dedicated pod", "Channel partners")}
+    totals = {o: cf[o].sum() / 1e6 for o in D.OPTIONS}
     best_d = max(totals, key=totals.get)
     st.markdown(f"**Best 24-month contribution at these settings: {best_d}.** " +
                 " · ".join(f"{o} ₹{v:.1f}M ({won[o]:.0f} accounts)" for o, v in totals.items()))
     bbc = S["D"]["best_by_case"]
     st.caption(f"Pipeline result: {S['D']['recommendation']} in the base case. Pessimistic case: {bbc['low']}; "
                f"optimistic case: {bbc['high']}. The pod needs a {S['D']['pod_break_even_win_rate']:.0%} win rate "
-               f"(25% assumed) to beat the best alternative.")
+               f"(25% assumed) to beat the best alternative."
+               if S['D']['pod_break_even_win_rate'] else
+               f"Pipeline result: {S['D']['recommendation']} in the base case. Pessimistic case: {bbc['low']}; "
+               f"optimistic case: {bbc['high']}. No pod win rate beats partners at today's price: the reachable "
+               f"market (~{S['D']['market_check']['som_units']:.0f} units a year) caps the pod's extra capacity.")
 with rd:
     fig = go.Figure()
-    for o, c in [("Existing sales force", C1), ("Dedicated pod", C2), ("Channel partners", C3)]:
+    for o, c in [("Existing sales force", C1), ("Dedicated pod", C2), ("Channel partners", C3),
+                 ("Partners + architect programme", C4)]:
         fig.add_trace(go.Scatter(x=cf["month"], y=cf[o].cumsum() / 1e6, mode="lines", name=o, line=dict(color=c, width=2)))
     fig.add_hline(y=0, line_color=INK2)
     st.plotly_chart(style(fig, "Cumulative contribution after own costs, ₹M", "Month"), width="stretch")
+bcn, bcc = gi["buying_centre_new"], gi["buying_centre_core"]
+st.caption("**Buying centre** (share of orders where each role takes part) — Dumb Waiter: "
+           + ", ".join(f"{k} {v:.0%}" for k, v in list(bcn.items())[:5])
+           + ". Industrial lines: " + ", ".join(f"{k} {v:.0%}" for k, v in bcc.items())
+           + f". Overlap is small, so buyer distance = {gi['buyer_distance']:.2f}.")
+l3, m3, r3 = st.columns([5, 3, 3])
+with l3:
+    sod = data["sod"]
+    so = S["D"]["service_outputs"]
+    st.markdown("**What Dumb Waiter buyers need from a channel (service outputs, scored 1–5)**")
+    show_sod = sod.rename(columns={"need": "Need", "weight": "Weight", "Existing sales force": "Existing",
+                                   "Dedicated pod": "Pod", "Channel partners": "Dealers"})
+    show_sod["Weight"] = show_sod["Weight"].map("{:.0%}".format)
+    st.dataframe(show_sod, hide_index=True, width="stretch")
+    st.caption("Weighted: " + " · ".join(f"{k} {v:.2f}" for k, v in so["totals"].items())
+               + f". Changing any single score by one point flips the leader in {so['single_score_changes_that_flip_leader']} cases.")
+with m3:
+    mc = S["D"]["market_check"]
+    mk = S["D"]["market"]["base"]
+    fig = go.Figure(go.Bar(
+        x=["TAM", "SOM (reachable)", "Partners (assumed)", "Pilot (actual)"],
+        y=[mk["tam_units"], mk["som_units"], mc["assumed_partner_accounts_a_year"], gi["n_pilot_accounts"]],
+        marker_color=[C1, C1, C2, C2], marker_line=dict(color="white", width=2)))
+    fig.update_layout(hovermode="closest")
+    st.markdown("**Market size, units a year (base case)**")
+    st.plotly_chart(style(fig, "Units a year", height=300), width="stretch")
+    st.caption(f"Built bottom-up from housing, hotel and hospital data (data/market_sizing.csv). "
+               f"The market supports about {mc['dealers_supportable']:.0f} dealers at 6 installs each, so ~8 dealers "
+               "is selective distribution, not intensive.")
+with r3:
+    ev = S["D"]["evc"]["base"]
+    ps = S["D"]["price_scenario_contribution_24m_inr_m"]
+    st.markdown("**Price check (economic value to the customer)**")
+    st.markdown(f"Our price ₹{ev['current_price_inr'] / 1e5:.2f} lakh vs. competitor median "
+                f"₹{ev['competitor_price_inr'] / 1e5:.1f} lakh → EVC ≈ ₹{ev['evc_inr'] / 1e5:.1f} lakh, "
+                f"headroom ≈ ₹{ev['headroom_inr'] / 1e5:.1f} lakh. A hotel or hospital recovers the price in "
+                f"~{ev['payback_years_for_buyer']:.1f} years of saved helper wages.")
+    st.markdown("**At +20% price (10% fewer wins), 24-month contribution ₹M:** "
+                + " · ".join(f"{k} {v:.1f}" for k, v in ps.items()))
+    st.caption("Use the price slider to see it live.")
 st.divider()
 
 # ---------------------------------------------------------------------------
@@ -301,7 +408,7 @@ with le:
     ba.index.name = "Metric"
 
     def fmt(metric, v):
-        if "%" in metric or metric in ("Net margin", "Complex accounts with a product expert"):
+        if "%" in metric or metric == "Net margin" or "product expert" in metric:
             return f"{float(v):.1%}"
         if metric in ("Sales reps", "Rep utilisation range"):
             return str(v)

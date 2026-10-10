@@ -67,8 +67,8 @@ REGION_CENTROIDS = {  # approximate centroids (lat, lon) for distance only
 # ---------------------------------------------------------------------------
 # Expertise risk (the Haryana lesson, priced in rupees)
 # ---------------------------------------------------------------------------
-# A complex account (complexity >= 4) served by a rep without expertise in
-# its product line loses this share of its gross margin per year (lost deals,
+# An account whose buying centre includes engineering, served by a rep
+# without expertise in its product line, loses this share of its gross margin per year (lost deals,
 # lost add-ons, escalations). The case documents the effect, not its size,
 # so this is the single most judgement-heavy input in Module B; it is swept
 # 0%-25% in the dashboard.

@@ -50,7 +50,7 @@ def before_after(as_is_row, opt_row, financials_df, n_accounts):
             "Cost to serve per account (₹ '000)": cost_to_serve * 1e3 / n_accounts,
             "Cost to serve, % of revenue": cost_to_serve / revenue,
             "Revenue per rep (₹M)": revenue / row["reps_used"],
-            "Complex accounts with a product expert": row["complex_accounts_with_expert"],
+            "Engineering-led accounts served by a product expert": row["expert_coverage"],
             "Rep utilisation range": f"{row['utilisation_min']:.0%}–{row['utilisation_max']:.0%}",
         }
 

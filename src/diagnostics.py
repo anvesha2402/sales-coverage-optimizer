@@ -51,7 +51,77 @@ def compute_yoy_table(df):
     )
     out["sales_cost_pct_of_revenue"] = out["sales_opex_inr_m"] / out["revenue_inr_m"]
     out["net_margin"] = out["net_income_inr_m"] / out["revenue_inr_m"]
+    return add_operating_leverage(out)
+
+
+def add_operating_leverage(df, variable_pay_share=0.0):
+    """Degree of operating leverage (DOL) = contribution / operating profit:
+    the % change in profit for a 1% change in revenue.
+
+    Cost behaviour in this P&L: cost of sales, other opex and depreciation/
+    interest are modelled as shares of revenue (variable). The whole sales
+    cost -- payroll plus the travel/incentive loading -- scales with
+    HEADCOUNT, not revenue, so it is the fixed block. As headcount outruns
+    revenue, that block grows, profit thins, and DOL climbs: the business
+    becomes fragile to any revenue dip.
+
+    variable_pay_share: what-if share of rep pay converted to commission
+    (paid as a share of revenue), which moves cost from fixed to variable."""
+    out = df.copy()
+    fixed = out["sales_opex_inr_m"] * (1 - variable_pay_share)
+    pbt = out["total_cost_inr_m"] - out["tax_inr_m"]
+    pbt = out["revenue_inr_m"] - pbt                      # operating profit before tax
+    variable = out["revenue_inr_m"] - pbt - fixed
+    out["fixed_cost_inr_m"] = fixed
+    out["variable_cost_inr_m"] = variable
+    out["contribution_inr_m"] = out["revenue_inr_m"] - variable
+    out["operating_profit_inr_m"] = pbt
+    out["operating_leverage"] = np.where(pbt > 0, out["contribution_inr_m"] / pbt, np.nan)
+    out["profit_change_if_revenue_falls_10pct"] = np.where(
+        pbt > 0, -0.10 * out["contribution_inr_m"] / pbt, np.nan)
     return out
+
+
+def decompose_revenue(financials_df, yearly_accounts_df):
+    """Revenue per rep = accounts per rep x revenue per account.
+
+    Splits the change in revenue per rep into (a) each rep covering fewer or
+    more accounts and (b) each account being worth less or more. Uses log
+    changes so the two parts add up exactly.
+
+    Two of the four classic terms (win rate, repeat-order rate) are left out
+    on purpose: they need deal-level data (opportunities won and lost) that
+    this dataset does not have. accounts_won / accounts_lost are reported as
+    context, not as a decomposition term."""
+    df = financials_df[["year", "revenue_inr_m", "sales_headcount"]].merge(yearly_accounts_df, on="year")
+    df["revenue_per_rep_inr_m"] = df["revenue_inr_m"] / df["sales_headcount"]
+    df["accounts_per_rep"] = df["active_accounts"] / df["sales_headcount"]
+    df["revenue_per_account_inr_k"] = df["revenue_inr_m"] * 1e3 / df["active_accounts"]
+    df["d_ln_revenue_per_rep"] = np.log(df["revenue_per_rep_inr_m"]).diff()
+    df["from_accounts_per_rep"] = np.log(df["accounts_per_rep"]).diff()
+    df["from_revenue_per_account"] = np.log(df["revenue_per_account_inr_k"]).diff()
+    first, last = df.iloc[0], df.iloc[-1]
+    total = np.log(last["revenue_per_rep_inr_m"] / first["revenue_per_rep_inr_m"])
+    part_a = np.log(last["accounts_per_rep"] / first["accounts_per_rep"])
+    part_b = np.log(last["revenue_per_account_inr_k"] / first["revenue_per_account_inr_k"])
+    summary = {
+        "revenue_per_rep_change": float(last["revenue_per_rep_inr_m"] / first["revenue_per_rep_inr_m"] - 1),
+        "accounts_per_rep_change": float(last["accounts_per_rep"] / first["accounts_per_rep"] - 1),
+        "revenue_per_account_change": float(last["revenue_per_account_inr_k"] / first["revenue_per_account_inr_k"] - 1),
+        "share_explained_by_accounts_per_rep": float(part_a / total) if total else None,
+        "share_explained_by_revenue_per_account": float(part_b / total) if total else None,
+    }
+    return df, summary
+
+
+def leverage_what_if(df, variable_pay_shares=(0.0, 0.2, 0.4)):
+    """Final-year DOL if part of rep pay were commission instead of salary."""
+    rows = []
+    for s in variable_pay_shares:
+        last = add_operating_leverage(df, s).iloc[-1]
+        rows.append({"variable_pay_share": s, "operating_leverage": last["operating_leverage"],
+                     "profit_change_if_revenue_falls_10pct": last["profit_change_if_revenue_falls_10pct"]})
+    return pd.DataFrame(rows)
 
 
 def find_warning_year(yoy, ratio=None):

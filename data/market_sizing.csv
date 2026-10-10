@@ -1,0 +1,19 @@
+segment,step,value_low,value_base,value_high,unit,basis,source
+Builder / real estate,Luxury housing units launched a year in covered cities,55000,70000,85000,units,"NCR ~55% of 61,775 launches above INR 2.5 Cr (~34,000, sourced); MMR, Bengaluru, Chennai, Pune luxury units estimated from the 21% top-7 average",ANAROCK 2025 annual residential data via Storyboard18 (https://www.storyboard18.com/how-it-works/housing-sales-volume-falls-14-y-o-y-in-2025-but-sales-value-rises-6-in-top-7-cities-86615.htm)
+Builder / real estate,Average luxury project size,350,250,180,units per project,Assumption,Assumption
+Builder / real estate,Share of luxury projects installing a dumb waiter,0.15,0.25,0.35,share,"Clubhouse kitchens, penthouses, villas; assumption",Assumption
+Builder / real estate,Dumb waiters per installing project,1,1.5,2,units,Assumption,Assumption
+Hotel / restaurant,Branded hotels opened a year (India),176,176,176,properties,"~14,199 rooms across 176 properties opened in 2025",HVS ANAROCK India Hospitality Industry Overview 2025 (https://www.hvs.com/article/10451-hvs-anarock-india-hospitality-industry-overview-2025)
+Hotel / restaurant,Share of openings in covered regions,0.25,0.35,0.45,share,Assumption (growth is shifting to Tier 2-4 markets per HVS),Assumption
+Hotel / restaurant,Share of new hotels installing,0.4,0.6,0.8,share,Multi-floor kitchens and banquets; assumption,Assumption
+Hotel / restaurant,Dumb waiters per installing hotel,1,2,3,units,Assumption,Assumption
+Hotel / restaurant,Multi-floor restaurants opened a year in covered regions,250,400,600,outlets,No usable published figure found; assumption,Assumption
+Hotel / restaurant,Share of those restaurants installing,0.15,0.25,0.35,share,Assumption,Assumption
+Hospital,Private hospital beds added a year (India),6000,6500,7500,beds,"Over 30,000 beds in 4-5 years",ICRA via Business Standard (https://www.business-standard.com/health/pvt-hospitals-projected-to-add-30-000-beds-over-next-5-yrs-icra-124011700575_1.html)
+Hospital,Average new hospital size,250,200,150,beds,Assumption,Assumption
+Hospital,Share of new hospitals in covered regions,0.3,0.4,0.5,share,Assumption,Assumption
+Hospital,Share installing; dumb waiters per hospital,0.6,0.7,0.8,share,"Pharmacy, kitchen, linen; assumption",Assumption
+Hospital,Dumb waiters per installing hospital,2,3,4,units,Assumption,Assumption
+All,Retrofit market as a multiple of new-build,0.5,1.0,1.5,multiple,Existing buildings adding units; assumption,Assumption
+All,Reachable share for this company (vs local fabricators),0.05,0.10,0.15,share,"Dozens of local fabricators list dumb waiters at INR 0.6-8.5 lakh (median ~2.5 lakh); assumption",IndiaMART dumbwaiter listings (https://dir.indiamart.com/impcat/dumbwaiter-lift.html)
+All,Typical competitor price,200000,250000,300000,INR per unit,Median of IndiaMART listings; most between INR 2 and 3 lakh,IndiaMART dumbwaiter listings (https://dir.indiamart.com/impcat/dumbwaiter-lift.html)

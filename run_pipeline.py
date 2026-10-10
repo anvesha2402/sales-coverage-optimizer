@@ -80,6 +80,15 @@ def main(quick=False):
     pd.DataFrame(tradeoff).to_csv(os.path.join(OUT, "a_threshold_tradeoff.csv"), index=False)
     summary["A"] = {k: v for k, v in a.items() if k != "yoy_table"}
     summary["A"]["backtest"] = bt
+    ya = pd.read_csv(os.path.join(GEN, "yearly_accounts.csv"))
+    dec, dec_s = DA.decompose_revenue(fin, ya)
+    dec.to_csv(os.path.join(OUT, "a_decomposition.csv"), index=False)
+    lev = DA.leverage_what_if(fin)
+    lev.to_csv(os.path.join(OUT, "a_leverage_what_if.csv"), index=False)
+    summary["A"]["decomposition"] = dec_s
+    summary["A"]["operating_leverage_by_year"] = dict(zip(a["yoy_table"]["year"].astype(str),
+                                                          a["yoy_table"]["operating_leverage"].round(2)))
+    summary["A"]["leverage_what_if"] = lev.to_dict("records")
 
     # ---- B ---------------------------------------------------------------
     print("B  coverage structures ...")
@@ -103,8 +112,15 @@ def main(quick=False):
     c["table"].to_csv(os.path.join(OUT, "c_compare.csv"), index=False)
     c["assignment"].to_csv(os.path.join(OUT, "c_assignment.csv"), index=False)
     hi_risk, _, _ = C.optimise(accounts, reps, structure, expertise_loss=0.25)
+    print("C  bottleneck values ...")
+    bn_today = C.bottleneck_values(accounts, reps, structure)
+    r2 = C.with_transfer_slots(reps)
+    owner = c["assignment"]["new_rep_id"].map({x: i for i, x in enumerate(r2["rep_id"])}).fillna(-1).astype(int).values
+    bn_after = C.bottleneck_values(accounts, reps, structure, kept_owner=owner)
+    bn = pd.concat([bn_today.assign(when="Today"), bn_after.assign(when="After redesign")])
+    bn.to_csv(os.path.join(OUT, "c_bottleneck.csv"), index=False)
     summary["C"] = {"structure": structure, "table": c["table"].to_dict("records"),
-                    "optimiser_at_25pct_expertise_loss": hi_risk}
+                    "optimiser_at_25pct_expertise_loss": hi_risk, "bottleneck": bn.to_dict("records")}
     if not quick:
         print("C  capacity what-if ...")
         cap = C.capacity_what_if(acc_p, rep_p, structure)
@@ -117,10 +133,18 @@ def main(quick=False):
     d["options"].to_csv(os.path.join(OUT, "d_options.csv"), index=False)
     for case, cf in d["flows"].items():
         cf.to_csv(os.path.join(OUT, f"d_flows_{case}.csv"), index=False)
+    so = d["service_outputs"]
+    so["table"].to_csv(os.path.join(OUT, "d_service_outputs.csv"), index=False)
+    pd.DataFrame(d["market"].values()).to_csv(os.path.join(OUT, "d_market_sizing.csv"), index=False)
+    pd.DataFrame(d["evc"].values()).to_csv(os.path.join(OUT, "d_evc.csv"), index=False)
     summary["D"] = {k: d[k] for k in ("inputs", "fit", "flip_points", "recommendation", "best_by_case",
-                                      "pod_break_even_win_rate")}
+                                      "pod_break_even_win_rate", "market", "market_check", "evc",
+                                      "price_scenario_contribution_24m_inr_m")}
+    summary["D"]["service_outputs"] = {k: so[k] for k in ("totals", "leader", "leader_margin",
+                                                          "single_score_changes_that_flip_leader")}
     redeployed = {"Dedicated pod": D.GTM_ASSUMPTIONS["pod_reps"],
-                  "Channel partners": D.GTM_ASSUMPTIONS["partner_manager_reps"]}.get(d["recommendation"], 0)
+                  "Channel partners": D.GTM_ASSUMPTIONS["partner_manager_reps"],
+                  "Partners + architect programme": D.GTM_ASSUMPTIONS["partner_manager_reps"]}.get(d["recommendation"], 0)
 
     # ---- Economics -------------------------------------------------------
     print("$  economics ...")

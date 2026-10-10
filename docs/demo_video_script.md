@@ -36,14 +36,14 @@ Screen: the "How the pieces connect" line, scroll past Module B.
 **0:45–1:20 — the slider (one unbroken take)**
 
 > This slider is the guess that matters most: how much margin we lose
-> when a complex account gets a rep who doesn't know the product. At ten
-> percent, a geographic structure wins. Push it up, and the specialist
-> overlay starts to edge ahead. But look at the gap: never more than
-> three percent. And pure product specialists never win at any setting,
-> because they spend their week travelling.
+> when an account with engineers in the buying decision gets a rep who
+> doesn't know the product. Even if I push it all the way up, geographic
+> still wins, unless travel gets twice as cheap. And pure product
+> specialists never win at any setting, because they spend their week
+> travelling.
 
-Screen: drag the expertise-loss slider from 0.10 to 0.75 with travel at
-0.5×. Watch the Module B bars and the "At these settings" line change.
+Screen: drag the expertise-loss slider from 0.10 to 1.0 at travel 1.0×,
+then drop travel to 0.5× and watch the Hybrid edge ahead. Watch the Module B bars and the "At these settings" line change.
 Let it sit for a beat.
 
 **1:20–1:50 — the optimiser and the money**
@@ -51,9 +51,12 @@ Let it sit for a beat.
 > The optimiser says forty-five reps, not fifty-six. But Haryana, the
 > most complex region, actually needs two more. One rep there is carrying
 > more than double a full workload today. The saving is twelve million
-> rupees a year, the change costs four and a half, and it pays back in
+> rupees a year, the change costs four point six, and it pays back in
 > month six. For the new product, the answer isn't the sales force or a
-> dedicated team. It's dealers.
+> dedicated team. It's dealers: the buyers are architects and builders,
+> not plant engineers, and the market is too small for a dedicated team.
+> The bigger lever is price: we're about eighty thousand rupees below the
+> market median.
 
 Screen: Module C table and the region bar chart, then the payback chart.
 
