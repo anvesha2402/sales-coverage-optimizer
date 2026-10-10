@@ -1,0 +1,467 @@
+{
+  "A": {
+    "sustainability_score": 20.0,
+    "warning_year": 2020,
+    "breach_year": 2022,
+    "lead_years": 2,
+    "revenue_watch_year": null,
+    "base_margin": 0.1156,
+    "breach_line": 0.0578,
+    "cumulative_headcount_growth": 3.5,
+    "cumulative_revenue_growth": 2.1,
+    "cumulative_growth_ratio": 1.67,
+    "in_step_headcount": 33.6,
+    "backtest": {
+      "histories": 200,
+      "histories_with_breach": 128,
+      "detection_rate": 0.9921875,
+      "false_alarm_rate": 0.2361111111111111,
+      "median_lead_years": 2.0,
+      "revenue_watch_detection_rate": 0.3359375,
+      "revenue_watch_false_alarm_rate": 0.4305555555555556
+    }
+  },
+  "B": {
+    "recommended_structure": "Geographic",
+    "structures": [
+      {
+        "structure": "Geographic",
+        "reps_used": 45,
+        "payroll_inr_m": 47.633349,
+        "travel_inr_m": 6.9978,
+        "expertise_risk_inr_m": 0.35076828000000004,
+        "uncovered_margin_inr_m": 1.5544960000000003,
+        "total_cost_inr_m": 56.53641328,
+        "revenue_covered": 0.9876627294929092,
+        "complex_accounts_with_expert": 0.6993865030674846,
+        "utilisation_min": 0.04848484848484848,
+        "utilisation_max": 0.8993939393939394
+      },
+      {
+        "structure": "Product Specialist",
+        "reps_used": 53,
+        "payroll_inr_m": 56.590846,
+        "travel_inr_m": 18.10416474875895,
+        "expertise_risk_inr_m": 0.0,
+        "uncovered_margin_inr_m": 2.0597108,
+        "total_cost_inr_m": 76.75472154875894,
+        "revenue_covered": 0.9836530880066746,
+        "complex_accounts_with_expert": 1.0,
+        "utilisation_min": 0.03393939393939393,
+        "utilisation_max": 0.8993939393939394
+      },
+      {
+        "structure": "Segmented Hybrid",
+        "reps_used": 45,
+        "payroll_inr_m": 47.633349,
+        "travel_inr_m": 7.579833006723651,
+        "expertise_risk_inr_m": 0.3507682800000001,
+        "uncovered_margin_inr_m": 0.9263404000000001,
+        "total_cost_inr_m": 56.49029068672365,
+        "revenue_covered": 0.9926480916667224,
+        "complex_accounts_with_expert": 0.72,
+        "utilisation_min": 0.04848484848484848,
+        "utilisation_max": 0.8993939393939394
+      }
+    ],
+    "robustness": [
+      {
+        "structure": "Geographic",
+        "cost_mean": 55.63286206960001,
+        "cost_p10": 53.608098128,
+        "cost_p90": 57.48472998,
+        "outright_win_share": 0.21,
+        "tied_best_share": 0.73,
+        "reps_mean": 44.61,
+        "expert_share_mean": 0.7236579476071188
+      },
+      {
+        "structure": "Product Specialist",
+        "cost_mean": 71.59974632785799,
+        "cost_p10": 66.12771198753302,
+        "cost_p90": 77.59003879951118,
+        "outright_win_share": 0.0,
+        "tied_best_share": 0.0,
+        "reps_mean": 50.11,
+        "expert_share_mean": 1.0
+      },
+      {
+        "structure": "Segmented Hybrid",
+        "cost_mean": 56.00483747907556,
+        "cost_p10": 53.60266648734944,
+        "cost_p90": 58.36237890734944,
+        "outright_win_share": 0.06,
+        "tied_best_share": 0.73,
+        "reps_mean": 44.91,
+        "expert_share_mean": 0.7296118967199849
+      }
+    ]
+  },
+  "C": {
+    "structure": "Geographic",
+    "table": [
+      {
+        "method": "As-is (today)",
+        "reps_used": 56,
+        "payroll_inr_m": 60.135784,
+        "travel_inr_m": 7.2246,
+        "expertise_risk_inr_m": 0.60556524,
+        "uncovered_margin_inr_m": 0.0,
+        "revenue_covered": 1.0,
+        "complex_accounts_with_expert": 0.8,
+        "utilisation_min": 0.04848484848484848,
+        "utilisation_max": 2.225454545454545,
+        "reps_over_capacity": 16.0,
+        "reps_under_half_loaded": 28.0,
+        "accounts_moved": 0,
+        "total_cost_inr_m": 67.96594924,
+        "transfers_in": null,
+        "transfers_by_region": null,
+        "existing_reps_kept": null,
+        "existing_reps_freed": null,
+        "regions_short_of_capacity": null,
+        "solve_seconds": null,
+        "solver_status": null
+      },
+      {
+        "method": "Greedy (fill cheapest first)",
+        "reps_used": 47,
+        "payroll_inr_m": 49.980571,
+        "travel_inr_m": 7.2246,
+        "expertise_risk_inr_m": 0.4135838400000001,
+        "uncovered_margin_inr_m": 0.0,
+        "revenue_covered": 1.0,
+        "complex_accounts_with_expert": 0.6514285714285715,
+        "utilisation_min": 0.04848484848484848,
+        "utilisation_max": 0.8993939393939394,
+        "reps_over_capacity": null,
+        "reps_under_half_loaded": null,
+        "accounts_moved": 558,
+        "total_cost_inr_m": 57.61875484,
+        "transfers_in": 2.0,
+        "transfers_by_region": {
+          "R02": 2
+        },
+        "existing_reps_kept": 45.0,
+        "existing_reps_freed": 11.0,
+        "regions_short_of_capacity": [],
+        "solve_seconds": null,
+        "solver_status": null
+      },
+      {
+        "method": "Optimiser",
+        "reps_used": 45,
+        "payroll_inr_m": 47.890745,
+        "travel_inr_m": 7.2246,
+        "expertise_risk_inr_m": 0.422978,
+        "uncovered_margin_inr_m": 0.0,
+        "revenue_covered": 1.0,
+        "complex_accounts_with_expert": 0.6742857142857143,
+        "utilisation_min": 0.5054545454545454,
+        "utilisation_max": 0.8969696969696969,
+        "reps_over_capacity": null,
+        "reps_under_half_loaded": null,
+        "accounts_moved": 247,
+        "total_cost_inr_m": 55.538323,
+        "transfers_in": 2.0,
+        "transfers_by_region": {
+          "R02": 2
+        },
+        "existing_reps_kept": 43.0,
+        "existing_reps_freed": 13.0,
+        "regions_short_of_capacity": [],
+        "solve_seconds": 118.1,
+        "solver_status": "Optimal"
+      },
+      {
+        "method": "Optimiser (ignores current owners)",
+        "reps_used": 45,
+        "payroll_inr_m": 47.710138,
+        "travel_inr_m": 7.2246,
+        "expertise_risk_inr_m": 0.34017396,
+        "uncovered_margin_inr_m": 0.0,
+        "revenue_covered": 1.0,
+        "complex_accounts_with_expert": 0.7314285714285714,
+        "utilisation_min": 0.5284848484848483,
+        "utilisation_max": 0.8993939393939393,
+        "reps_over_capacity": null,
+        "reps_under_half_loaded": null,
+        "accounts_moved": 551,
+        "total_cost_inr_m": 55.274911960000004,
+        "transfers_in": 2.0,
+        "transfers_by_region": {
+          "R02": 2
+        },
+        "existing_reps_kept": 43.0,
+        "existing_reps_freed": 13.0,
+        "regions_short_of_capacity": [],
+        "solve_seconds": 99.5,
+        "solver_status": "Optimal"
+      }
+    ],
+    "optimiser_at_25pct_expertise_loss": {
+      "reps_used": 45,
+      "payroll_inr_m": 47.890745,
+      "travel_inr_m": 7.2246,
+      "expertise_risk_inr_m": 0.7628202,
+      "uncovered_margin_inr_m": 0.0,
+      "total_cost_inr_m": 55.878165200000005,
+      "revenue_covered": 1.0,
+      "complex_accounts_with_expert": 0.7257142857142858,
+      "utilisation_min": 0.5054545454545454,
+      "utilisation_max": 0.8993939393939393,
+      "transfers_in": 2,
+      "transfers_by_region": {
+        "R02": 2
+      },
+      "existing_reps_kept": 43,
+      "existing_reps_freed": 13,
+      "accounts_moved": 256,
+      "regions_short_of_capacity": [],
+      "method": "Optimiser",
+      "solve_seconds": 129.0,
+      "solver_status": "Optimal"
+    },
+    "capacity_what_if": [
+      {
+        "selling_hours_per_rep": 750,
+        "reps_needed": 56,
+        "payroll_inr_m": 60.652323428571435,
+        "total_cost_inr_m": 73.58968154857143,
+        "revenue_covered": 0.961180013777969,
+        "regions_short_of_capacity": "R02"
+      },
+      {
+        "selling_hours_per_rep": 850,
+        "reps_needed": 51,
+        "payroll_inr_m": 54.788937,
+        "total_cost_inr_m": 62.60879964,
+        "revenue_covered": 1.0,
+        "regions_short_of_capacity": ""
+      },
+      {
+        "selling_hours_per_rep": 990,
+        "reps_needed": 45,
+        "payroll_inr_m": 47.890745,
+        "total_cost_inr_m": 55.538323,
+        "revenue_covered": 1.0,
+        "regions_short_of_capacity": ""
+      },
+      {
+        "selling_hours_per_rep": 1100,
+        "reps_needed": 40,
+        "payroll_inr_m": 42.379889,
+        "total_cost_inr_m": 49.90639864,
+        "revenue_covered": 1.0,
+        "regions_short_of_capacity": ""
+      },
+      {
+        "selling_hours_per_rep": 1200,
+        "reps_needed": 38,
+        "payroll_inr_m": 40.095468,
+        "total_cost_inr_m": 47.59018332,
+        "revenue_covered": 1.0,
+        "regions_short_of_capacity": ""
+      }
+    ]
+  },
+  "D": {
+    "inputs": {
+      "n_pilot_accounts": 33,
+      "buyer_segment_distance": 1.0,
+      "buyer_region_distance": 0.3206620499975443,
+      "ticket_size_distance": 0.6692936569078543,
+      "buyer_distance": 0.6633185689684662,
+      "complexity_distance": 0.36959137566917144,
+      "deal_cycle_distance": 0.5045834295139047,
+      "avg_ticket_new_inr": 165902.66666666666,
+      "avg_ticket_core_inr": 501661.58022690436,
+      "deal_cycle_new_days": 46.484848484848484,
+      "deal_cycle_core_days": 93.82982171799027
+    },
+    "fit": {
+      "score": 0.521,
+      "verdict": "Poor fit for the existing motion"
+    },
+    "flip_points": {
+      "buyer_distance": 0.611,
+      "complexity_distance": 0.31,
+      "deal_cycle_distance": 0.421
+    },
+    "recommendation": "Channel partners",
+    "best_by_case": {
+      "low": "Channel partners",
+      "base": "Channel partners",
+      "high": "Dedicated pod"
+    },
+    "pod_break_even_win_rate": 0.29
+  },
+  "E": {
+    "annual_saving_inr_m": 12.245038999999991,
+    "before_after": {
+      "Today": {
+        "Sales reps": 56,
+        "Sales payroll (\u20b9M)": 60.135784,
+        "Field travel (\u20b9M)": 7.2246,
+        "Cost to serve (\u20b9M)": 67.360384,
+        "Cost to serve per account (\u20b9 '000)": 103.63135999999999,
+        "Cost to serve, % of revenue": 0.21384248888888888,
+        "Revenue per rep (\u20b9M)": 5.625,
+        "Complex accounts with a product expert": 0.8,
+        "Rep utilisation range": "5%\u2013223%",
+        "Net margin": 0.012126984126984127
+      },
+      "Redesigned": {
+        "Sales reps": 45,
+        "Sales payroll (\u20b9M)": 47.890745,
+        "Field travel (\u20b9M)": 7.2246,
+        "Cost to serve (\u20b9M)": 55.115345000000005,
+        "Cost to serve per account (\u20b9 '000)": 84.79283846153848,
+        "Cost to serve, % of revenue": 0.1749693492063492,
+        "Revenue per rep (\u20b9M)": 7.0,
+        "Complex accounts with a product expert": 0.6742857142857143,
+        "Rep utilisation range": "51%\u201390%",
+        "Net margin": 0.04128183888888887
+      }
+    },
+    "transition": [
+      {
+        "case": "low",
+        "Severance": 1.789755476190476,
+        "Relocation": 0.3,
+        "Retraining (relocated + redeployed)": 0.18,
+        "Margin lost on handed-over accounts": 0.553776912,
+        "total_inr_m": 2.823532388190476,
+        "reps_released": 10.0,
+        "accounts_moved": 247
+      },
+      {
+        "case": "base",
+        "Severance": 2.684633214285714,
+        "Relocation": 0.3,
+        "Retraining (relocated + redeployed)": 0.18,
+        "Margin lost on handed-over accounts": 1.3844422800000002,
+        "total_inr_m": 4.549075494285714,
+        "reps_released": 10.0,
+        "accounts_moved": 247
+      },
+      {
+        "case": "high",
+        "Severance": 5.369266428571428,
+        "Relocation": 0.3,
+        "Retraining (relocated + redeployed)": 0.18,
+        "Margin lost on handed-over accounts": 2.7688845600000005,
+        "total_inr_m": 8.618150988571427,
+        "reps_released": 10.0,
+        "accounts_moved": 247
+      }
+    ],
+    "payback": [
+      {
+        "case": "low",
+        "path": "release now",
+        "one_off_cost_inr_m": 2.823532388190476,
+        "payback_month": 4,
+        "net_benefit_24m_inr_m": 20.646125695142835,
+        "months_to_target_headcount": 1
+      },
+      {
+        "case": "low",
+        "path": "attrition",
+        "one_off_cost_inr_m": 1.033776912,
+        "payback_month": 5,
+        "net_benefit_24m_inr_m": 18.490257493555543,
+        "months_to_target_headcount": 11
+      },
+      {
+        "case": "base",
+        "path": "release now",
+        "one_off_cost_inr_m": 4.549075494285714,
+        "payback_month": 6,
+        "net_benefit_24m_inr_m": 18.920582589047598,
+        "months_to_target_headcount": 1
+      },
+      {
+        "case": "base",
+        "path": "attrition",
+        "one_off_cost_inr_m": 1.86444228,
+        "payback_month": 6,
+        "net_benefit_24m_inr_m": 17.659592125555545,
+        "months_to_target_headcount": 11
+      },
+      {
+        "case": "high",
+        "path": "release now",
+        "one_off_cost_inr_m": 8.618150988571427,
+        "payback_month": 10,
+        "net_benefit_24m_inr_m": 14.851507094761883,
+        "months_to_target_headcount": 1
+      },
+      {
+        "case": "high",
+        "path": "attrition",
+        "one_off_cost_inr_m": 3.2488845599999996,
+        "payback_month": 8,
+        "net_benefit_24m_inr_m": 16.275149845555543,
+        "months_to_target_headcount": 11
+      }
+    ],
+    "reps_redeployed_to_new_product": 1,
+    "region_changes": {
+      "R01": {
+        "region": "Delhi NCR",
+        "reps_today": 7,
+        "reps_needed": 7,
+        "accounts": 100,
+        "complex_accounts": 6,
+        "accounts_changing_owner": 29,
+        "change": 0
+      },
+      "R02": {
+        "region": "Haryana Belt",
+        "reps_today": 11,
+        "reps_needed": 13,
+        "accounts": 166,
+        "complex_accounts": 121,
+        "accounts_changing_owner": 88,
+        "change": 2
+      },
+      "R03": {
+        "region": "Maharashtra West",
+        "reps_today": 12,
+        "reps_needed": 9,
+        "accounts": 137,
+        "complex_accounts": 38,
+        "accounts_changing_owner": 51,
+        "change": -3
+      },
+      "R04": {
+        "region": "Gujarat Industrial Corridor",
+        "reps_today": 8,
+        "reps_needed": 5,
+        "accounts": 83,
+        "complex_accounts": 4,
+        "accounts_changing_owner": 24,
+        "change": -3
+      },
+      "R05": {
+        "region": "Karnataka South",
+        "reps_today": 6,
+        "reps_needed": 4,
+        "accounts": 59,
+        "complex_accounts": 0,
+        "accounts_changing_owner": 21,
+        "change": -2
+      },
+      "R06": {
+        "region": "Tamil Nadu Coastal",
+        "reps_today": 12,
+        "reps_needed": 7,
+        "accounts": 105,
+        "complex_accounts": 6,
+        "accounts_changing_owner": 34,
+        "change": -5
+      }
+    }
+  }
+}

@@ -1,18 +1,40 @@
 """
 diagnostics.py — Module A: Diagnostic Engine
 
-Business question: Is the sales org structurally sustainable, or is cost
-quietly outrunning growth before it shows up in the numbers leadership
-actually watches?
+Business question: Is the sales org structurally sustainable, or is sales
+cost quietly outrunning growth before it shows up in the numbers leadership
+watches (revenue)?
 
-Method: ratio analysis on yearly_financials — headcount growth vs. revenue
-growth, and the sales-cost-to-total-cost trend. No ML, no optimization:
-this module is direct computation on purpose (see build plan §3) because
-the question is "read the trend correctly," not "predict" or "optimize."
+Method: ratio analysis on yearly_financials -- no ML, no optimisation.
+
+Two separate things are computed, and kept separate on purpose:
+  1. An EARLY WARNING: the first year cumulative sales-headcount growth runs
+     more than 20% ahead of cumulative revenue growth
+     ((headcount_t / headcount_0) / (revenue_t / revenue_0) > 1.20).
+  2. A MARGIN BREACH: the first year net margin falls below half of its
+     base-year level. (Relative, not a fixed 10%, so it works for any
+     starting margin. The 50% cut-off is a judgement call, stated.)
+
+Because the stress scenario in the dataset was built to contain this
+pattern, catching it there proves little. `backtest()` therefore runs the
+same rule on 200 generated histories -- healthy and strained mixed -- and
+reports how often the warning is right, how often it is a false alarm, and
+how many years ahead of the margin breach it fires. It also compares the
+warning against the metric most leadership teams watch: revenue growth.
 """
+
+import os
+import sys
 
 import numpy as np
 import pandas as pd
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+from data import generate_synthetic_company as gen  # noqa: E402
+
+WARNING_RATIO = 1.20
+BREACH_SHARE_OF_BASE_MARGIN = 0.50
+REVENUE_SLOWDOWN_WARNING = 0.08     # "revenue-watcher" baseline: YoY growth < 8%
 
 
 def load_yearly_financials(path="data/generated/yearly_financials.csv"):
@@ -20,127 +42,151 @@ def load_yearly_financials(path="data/generated/yearly_financials.csv"):
 
 
 def compute_yoy_table(df):
-    """Year-over-year growth rates and the diagnostic ratios derived from them."""
     out = df.copy()
     out["revenue_growth_yoy"] = out["revenue_inr_m"].pct_change()
     out["headcount_growth_yoy"] = out["sales_headcount"].pct_change()
-    # The leading indicator: how many units of headcount growth are being
-    # bought per unit of revenue growth, year over year. 1.0 = growing in
-    # lockstep. >1.0 = headcount outrunning revenue that year.
-    out["growth_ratio"] = out["headcount_growth_yoy"] / out["revenue_growth_yoy"]
-    out["sales_cost_pct_of_total"] = out["sales_opex_inr_m"] / out["total_cost_inr_m"]
+    out["cum_growth_ratio"] = (
+        (out["sales_headcount"] / out["sales_headcount"].iloc[0])
+        / (out["revenue_inr_m"] / out["revenue_inr_m"].iloc[0])
+    )
+    out["sales_cost_pct_of_revenue"] = out["sales_opex_inr_m"] / out["revenue_inr_m"]
     out["net_margin"] = out["net_income_inr_m"] / out["revenue_inr_m"]
     return out
 
 
-def find_threshold_year(yoy_table, margin_threshold=0.10):
-    """
-    First year net margin drops below `margin_threshold`. This is the
-    'insight to derive': the exact year the ratio crosses a sustainability
-    threshold, computed from the data -- not eyeballed from a chart.
-    """
-    breach = yoy_table[yoy_table["net_margin"] < margin_threshold]
-    if breach.empty:
-        return None
-    return int(breach.iloc[0]["year"])
+def find_warning_year(yoy, ratio=None):
+    ratio = WARNING_RATIO if ratio is None else ratio
+    hit = yoy[yoy["cum_growth_ratio"] > ratio]
+    return int(hit.iloc[0]["year"]) if len(hit) else None
 
 
-def sustainability_score(yoy_table):
-    """
-    0-100 composite: penalizes (a) how far the average YoY growth_ratio sits
-    above 1.0 (headcount consistently outrunning revenue) and (b) how much
-    net margin has compressed from its first to its last observed year.
-    100 = fully sustainable trajectory, 0 = severe structural strain.
-    """
-    valid_ratios = yoy_table["growth_ratio"].dropna()
-    valid_ratios = valid_ratios[valid_ratios.apply(lambda x: x == x)]  # drop NaN/inf
-    avg_excess_ratio = max(0.0, valid_ratios.mean() - 1.0)
-    ratio_penalty = min(60.0, avg_excess_ratio * 30.0)  # cap contribution at 60 pts
+def find_breach_year(yoy, share=BREACH_SHARE_OF_BASE_MARGIN):
+    line = yoy["net_margin"].iloc[0] * share
+    hit = yoy[yoy["net_margin"] < line]
+    return int(hit.iloc[0]["year"]) if len(hit) else None
 
-    margin_start = yoy_table["net_margin"].iloc[0]
-    margin_end = yoy_table["net_margin"].iloc[-1]
-    margin_compression = max(0.0, margin_start - margin_end)
-    margin_penalty = min(40.0, margin_compression * 100.0)  # cap at 40 pts
 
+def find_revenue_watch_year(yoy, floor=REVENUE_SLOWDOWN_WARNING):
+    hit = yoy[yoy["revenue_growth_yoy"] < floor]
+    return int(hit.iloc[0]["year"]) if len(hit) else None
+
+
+def sustainability_score(yoy):
+    """0-100: penalises (a) cumulative headcount growth running ahead of
+    revenue growth by the final year and (b) margin lost since the base year."""
+    excess = max(0.0, yoy["cum_growth_ratio"].iloc[-1] - 1.0)
+    ratio_penalty = min(60.0, excess * 60.0)
+    compression = max(0.0, yoy["net_margin"].iloc[0] - yoy["net_margin"].iloc[-1])
+    margin_penalty = min(40.0, compression * 400.0)
     return round(max(0.0, 100.0 - ratio_penalty - margin_penalty), 1)
 
 
-def scenario_yearly_financials(
-    revenue_growth_multiple=2.1, headcount_growth_multiple=5.4,
-    base_revenue_inr_m=150.0, base_sales_headcount=22,
-    years=range(2019, 2025),
-):
-    """
-    Deterministic (no-noise) re-derivation of the same trajectory shape used
-    in data/generate_synthetic_company.py, parameterized so the Scenario
-    Dashboard can recompute Module A live as sliders move -- without
-    re-running the data generator or touching the committed dataset.
-    """
-    years = list(years)
-    n = len(years)
-    t = np.linspace(0, 1, n)
-
-    revenue = base_revenue_inr_m * (revenue_growth_multiple ** t)
-    sales_hc = np.round(base_sales_headcount * (headcount_growth_multiple ** (t ** 0.75))).astype(int)
-    support_ratio = np.linspace(1.75, 1.55, n)
-    total_hc = np.round(sales_hc * support_ratio).astype(int)
-
-    cos_ratio = np.linspace(0.44, 0.39, n)
-    cost_of_sales = revenue * cos_ratio
-    cost_per_rep = 0.9 * (1.06 ** np.arange(n))
-    sales_opex = sales_hc * cost_per_rep
-    other_opex = (total_hc - sales_hc) * 0.55 * (1.05 ** np.arange(n))
-    total_cost = cost_of_sales + sales_opex + other_opex
-    net_income = revenue - total_cost
-
-    return pd.DataFrame({
-        "year": years,
-        "revenue_inr_m": revenue.round(2),
-        "cost_of_sales_inr_m": cost_of_sales.round(2),
-        "sales_opex_inr_m": sales_opex.round(2),
-        "other_opex_inr_m": other_opex.round(2),
-        "total_cost_inr_m": total_cost.round(2),
-        "net_income_inr_m": net_income.round(2),
-        "sales_headcount": sales_hc,
-        "total_headcount": total_hc,
-    })
-
-
-def diagnose_from_df(df, margin_threshold=0.10):
-    """Same as diagnose(), but takes an in-memory dataframe (e.g. from
-    scenario_yearly_financials) instead of reading a CSV -- used by the
-    live dashboard."""
+def diagnose_from_df(df):
     df = df.sort_values("year").reset_index(drop=True)
     yoy = compute_yoy_table(df)
-    threshold_year = find_threshold_year(yoy, margin_threshold)
-    score = sustainability_score(yoy)
-    cum_headcount_growth = df["sales_headcount"].iloc[-1] / df["sales_headcount"].iloc[0]
-    cum_revenue_growth = df["revenue_inr_m"].iloc[-1] / df["revenue_inr_m"].iloc[0]
+    warn, breach = find_warning_year(yoy), find_breach_year(yoy)
+    hc = df["sales_headcount"].iloc[-1] / df["sales_headcount"].iloc[0]
+    rev = df["revenue_inr_m"].iloc[-1] / df["revenue_inr_m"].iloc[0]
     return {
         "yoy_table": yoy,
-        "sustainability_score": score,
-        "threshold_year": threshold_year,
-        "margin_threshold": margin_threshold,
-        "cumulative_headcount_growth": round(cum_headcount_growth, 2),
-        "cumulative_revenue_growth": round(cum_revenue_growth, 2),
-        "cumulative_growth_ratio": round(cum_headcount_growth / cum_revenue_growth, 2),
+        "sustainability_score": sustainability_score(yoy),
+        "warning_year": warn,
+        "breach_year": breach,
+        "lead_years": (breach - warn) if (warn and breach) else None,
+        "revenue_watch_year": find_revenue_watch_year(yoy),
+        "base_margin": yoy["net_margin"].iloc[0],
+        "breach_line": yoy["net_margin"].iloc[0] * BREACH_SHARE_OF_BASE_MARGIN,
+        "cumulative_headcount_growth": round(hc, 2),
+        "cumulative_revenue_growth": round(rev, 2),
+        "cumulative_growth_ratio": round(hc / rev, 2),
+        # Headcount the company would have today had it grown in step with revenue
+        "in_step_headcount": round(df["sales_headcount"].iloc[0] * rev, 1),
     }
 
 
-def diagnose(path="data/generated/yearly_financials.csv", margin_threshold=0.10):
-    df = load_yearly_financials(path)
-    return diagnose_from_df(df, margin_threshold)
+def diagnose(path="data/generated/yearly_financials.csv"):
+    return diagnose_from_df(load_yearly_financials(path))
+
+
+def scenario_yearly_financials(revenue_growth_multiple=2.1, headcount_growth_multiple=3.5,
+                               base_revenue_inr_m=150.0, base_sales_headcount=16,
+                               final_avg_rep_cost_inr_m=1.07, noise=0.0, rng=None):
+    """Same P&L structure as the data generator, driven by two multiples --
+    used by the live dashboard and by backtest()."""
+    n = len(gen.YEARS)
+    t = np.linspace(0, 1, n)
+    rng = rng or np.random.default_rng(0)
+    revenue = base_revenue_inr_m * revenue_growth_multiple ** t
+    hc = base_sales_headcount * headcount_growth_multiple ** (t ** 0.75)
+    if noise:
+        revenue = revenue * (1 + rng.normal(0, noise, n))
+        hc = hc * (1 + rng.normal(0, noise * 2, n))
+        revenue[0], hc[0] = base_revenue_inr_m, base_sales_headcount
+    hc = np.maximum(1, np.round(hc)).astype(int)
+    avg_cost = final_avg_rep_cost_inr_m / (1 + gen.REP_COST_INFLATION) ** np.arange(n - 1, -1, -1)
+    payroll = hc * avg_cost
+    sales_opex = payroll * (1 + gen.SALES_EXPENSE_LOADING)
+    cos = revenue * np.linspace(*gen.COST_OF_SALES_SHARE, n)
+    other = revenue * gen.OTHER_OPEX_SHARE
+    dep = revenue * gen.DEPRECIATION_INTEREST_SHARE
+    pbt = revenue - cos - sales_opex - other - dep
+    tax = np.where(pbt > 0, pbt * gen.TAX_RATE, 0.0)
+    return pd.DataFrame({
+        "year": gen.YEARS, "revenue_inr_m": revenue, "cost_of_sales_inr_m": cos,
+        "sales_payroll_inr_m": payroll, "sales_opex_inr_m": sales_opex, "other_opex_inr_m": other,
+        "depreciation_interest_inr_m": dep, "tax_inr_m": tax,
+        "total_cost_inr_m": cos + sales_opex + other + dep + tax,
+        "net_income_inr_m": pbt - tax, "sales_headcount": hc,
+    })
+
+
+def backtest(n_histories=200, seed=7):
+    """Run the warning rule on generated histories it was not tuned on.
+    Headcount multiple is drawn from 0.7x to 2.0x the revenue multiple, so
+    roughly half the histories are healthy and half strained. Each history's
+    outcome (did margin actually breach?) is what the warning is scored
+    against -- not the label it was generated with."""
+    rng = np.random.default_rng(seed)
+    rows = []
+    for i in range(n_histories):
+        rev_mult = rng.uniform(1.3, 2.8)
+        hc_mult = rev_mult * rng.uniform(0.7, 2.0)
+        df = scenario_yearly_financials(rev_mult, hc_mult, noise=0.03, rng=rng)
+        d = diagnose_from_df(df)
+        rows.append({
+            "history": i, "revenue_multiple": rev_mult, "headcount_multiple": hc_mult,
+            "warning_year": d["warning_year"], "breach_year": d["breach_year"],
+            "revenue_watch_year": d["revenue_watch_year"],
+        })
+    res = pd.DataFrame(rows)
+    breached = res["breach_year"].notna()
+    warned = res["warning_year"].notna()
+    early = breached & warned & (res["warning_year"] <= res["breach_year"])
+    rev_early = breached & res["revenue_watch_year"].notna() & (res["revenue_watch_year"] <= res["breach_year"])
+    lead = (res.loc[early, "breach_year"] - res.loc[early, "warning_year"])
+    summary = {
+        "histories": n_histories,
+        "histories_with_breach": int(breached.sum()),
+        "detection_rate": float(early.sum() / max(1, breached.sum())),
+        "false_alarm_rate": float((warned & ~breached).sum() / max(1, (~breached).sum())),
+        "median_lead_years": float(lead.median()) if len(lead) else None,
+        "revenue_watch_detection_rate": float(rev_early.sum() / max(1, breached.sum())),
+        "revenue_watch_false_alarm_rate": float(
+            (res["revenue_watch_year"].notna() & ~breached).sum() / max(1, (~breached).sum())),
+    }
+    return res, summary
 
 
 if __name__ == "__main__":
-    result = diagnose()
-    print(result["yoy_table"][
-        ["year", "revenue_growth_yoy", "headcount_growth_yoy", "growth_ratio",
-         "sales_cost_pct_of_total", "net_margin"]
-    ].round(3).to_string(index=False))
-    print(f"\nSustainability score: {result['sustainability_score']} / 100")
-    print(f"Threshold year (net margin < {result['margin_threshold']:.0%}): "
-          f"{result['threshold_year']}")
-    print(f"Cumulative headcount growth: {result['cumulative_headcount_growth']}x")
-    print(f"Cumulative revenue growth:   {result['cumulative_revenue_growth']}x")
-    print(f"Cumulative growth ratio:     {result['cumulative_growth_ratio']}x")
+    r = diagnose()
+    print(r["yoy_table"][["year", "revenue_growth_yoy", "headcount_growth_yoy", "cum_growth_ratio",
+                          "sales_cost_pct_of_revenue", "net_margin"]].round(3).to_string(index=False))
+    print(f"\nSustainability score: {r['sustainability_score']}/100")
+    print(f"Early warning year: {r['warning_year']}  |  margin breach year "
+          f"(net margin < {r['breach_line']:.1%}, half of base): {r['breach_year']}  |  lead: {r['lead_years']} yrs")
+    print(f"Revenue-watcher (YoY growth < 8%) would have flagged: {r['revenue_watch_year']}")
+    print(f"Headcount if it had grown in step with revenue: {r['in_step_headcount']} (actual 56)")
+    _, s = backtest()
+    print("\nBacktest on 200 generated histories:")
+    for k, v in s.items():
+        print(f"  {k}: {v}")

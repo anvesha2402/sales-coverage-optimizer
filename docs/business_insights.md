@@ -1,157 +1,230 @@
-# Business Insights — Stage 2 Checkpoint
+# Business Insights
 
-Filled in with real output from `src/`, run against the seed-42 synthetic
-dataset. Not the build plan's illustrative language — this is what the code
-actually returned.
+Real output from `run_pipeline.py` on the seed-42 synthetic dataset, base
+assumptions (`docs/assumptions.md`). Every number here is in
+`data/results/`. Where a result depends on a guess, the guess is named and
+its range is shown.
 
----
+## What changed since the first version, and why
 
-## A. Diagnostic Engine
+A review found that the first version's headline numbers mostly came from
+how the data and a few settings had been chosen, not from analysis.
 
-**Output:** Sustainability score **14/100**. Threshold year **2023** — the
-first year net margin drops below 10% (it lands at 6.6%, then 1.0% by 2024).
-Sales-cost-to-total-cost climbs every single year: 21% → 28% → 33% → 37% →
-43% → 46%. Headcount grew 5.41x over six years against 2.10x revenue growth
-— a cumulative growth ratio of 2.58x.
-
-**Insight to derive:** 2023, not 2024. By the time revenue growth looks
-fine on the surface (2024's YoY revenue growth is actually the *best* year
-in the series, 19.5%), the margin has already been bleeding out for a year.
-The ratio moved first, exactly as the hypothesis predicted.
-
-**Decision it enables:** if this were real, the restructuring conversation
-should have started in 2022 — the year the YoY growth_ratio last dipped near
-parity (2.16x, still bad) before climbing further — not in 2023 when margin
-compression was already visible to anyone reading the P&L directly. The
-tool's value is in catching it a year earlier than the income statement
-would.
-
-**Business interpretation (VP-of-Sales voice):** *We didn't miss our
-numbers because sales slowed down — revenue never stopped growing. We
-missed them because every rupee of growth started costing more rupees of
-headcount to produce, and that shift was visible in the ratio two years
-before it showed up in the margin line. If we're still measuring health by
-"is revenue up," we're reading last year's problem.*
+| First version said | Problem | Now |
+|---|---|---|
+| "38 reps, not 119; 70.9% cheaper" | 38 was arithmetic on an unsourced "55 points per rep". The baseline used every rep by design, and idle reps were counted as free | Workload built up from visits and hours; compared against the real as-is, a greedy rule, and the optimiser. **56 → 45 reps, 18% lower cost to serve** |
+| "Ratio warned a year before margin" | Detected a planted pattern; 37% starting margin; docs contradicted themselves | Tested on 200 histories it wasn't tuned on; realistic P&L. **Warning catches 99% of breaches ~2 years early, with 24% false alarms** |
+| "Product Specialist is cheapest" | Travel was free, and travel is why the real company went geographic | Travel and expertise risk priced in rupees. **Product Specialist is the most expensive; Geographic and Hybrid tie** |
+| "Pod breaks even in 2.4 months" | Annual pay counted as one-time; revenue counted as profit; 40 accounts assumed vs 33 in data | Margin-based 24-month model with three options. **Channel partners; a pod needs a 29% win rate to win** |
+| "Echoes the case's headcount problem" | The case shows the opposite (reps 1.4× vs revenue 2.1×) | Labelled as a stress scenario invented to test Module A |
 
 ---
 
-## B. Coverage Model Simulator
+## A. Diagnostic Engine — is sales cost outrunning growth?
 
-**Output:**
+**Output.** Net margin falls every year, from 11.6% (2019) to 1.2% (2024),
+while revenue grows 2.1×. Sales headcount grows 3.5× (16 → 56), so sales
+cost rises from 9.6% to 21.4% of revenue.
 
-| Structure | Reps used | Cost-to-serve | Coverage gap | Specialization depth |
-|---|---|---|---|---|
-| Product Specialist | 37 | INR 35.6M | 0.0% | 100% |
-| Geographic | 38 | INR 38.2M | 0.0% | 0% (by definition) |
-| Segmented Hybrid | 39 | INR 39.9M | 4.6% | 28.9% |
+- **Early warning: 2020.** Cumulative headcount growth is already 24%
+  ahead of revenue growth.
+- **Margin breach: 2022.** Net margin falls below half its base-year level
+  (5.8%).
+- **2 years' notice.** Sustainability score 20/100.
+- Revenue growth never drops below 14% in any year, so a team watching
+  revenue would have seen nothing.
+- Had headcount grown in step with revenue, the team would be **34** reps,
+  not 56.
 
-**Insight to derive:** the hybrid did **not** win this round — it cost more
-than Product Specialist at every tested split. Swept `HYBRID_SPECIALIST_SHARE`
-across 0.30 / 0.40 / 0.50 / 0.60 to check whether the first run was just a
-badly-tuned knob:
+**Is the warning any good?** Run on 200 generated histories (headcount
+growing anywhere from 0.7× to 2× as fast as revenue, with noise), judged
+against whether margin actually breached:
 
-| Specialist share | Cost | Coverage gap | Depth |
+| Warn when headcount runs ahead by | Breaches caught | False alarms | Median years' notice |
 |---|---|---|---|
-| 30% | 39.4M | 0.5% | 27.2% |
-| 40% | 39.0M | 0.5% | 27.2% |
-| 50% | 40.4M | 0.0% | 27.5% |
-| 60% | 39.9M | 0.0% | 27.5% |
+| 10% | 100% | 63% | 2 |
+| **20% (used)** | **99%** | **24%** | **2** |
+| 30% | 91% | 4% | 1 |
+| 40% | 77% | 0% | 0 |
 
-Cost never drops below Product Specialist's 35.6M at any share, and depth
-plateaus around 27–28% regardless — this is a real result, not an artifact
-of one bad setting. The plan's own hypothesis (segmented hybrid beats both
-pure models) doesn't hold on this synthetic account base, at least not
-under this eligibility/capacity design.
+Watching revenue growth instead (warn when it falls below 8%) caught only
+34% of breaches, with 43% false alarms.
 
-**Decision it enables:** as measured, pure Product Specialist is the
-frontrunner — cheapest, zero coverage gap, full specialization depth. The
-honest caveat that remains: the `specialization_depth` metric only credits
-specialist-tier matches, so generalists correctly serving simple accounts
-(their actual job) score zero "depth" they never needed — a metric-design
-choice, not a data artifact, and one a reviewer could reasonably push back
-on.
+**Insight.** The ratio is a real leading indicator, but there is a trade-off
+to choose, not a free lunch. At 20% it catches almost everything two years
+out and is wrong about one time in four. At 30% it is rarely wrong but
+gives one year's notice instead of two.
 
-**Business interpretation (VP-of-Sales voice):** *We tested hybrid across a
-range of specialist-to-generalist mixes, not just one guess, and pure
-product specialization still came out cheaper and fully covered every time.
-That's a real result on this data, not a fluke of one setting — though I'd
-want to be upfront in any write-up that our "depth" score is measuring
-something specific (specialist-tier matches only), not a complete picture
-of service quality.*
+**Decision it enables.** Track cumulative headcount growth against revenue
+growth every quarter. Treat 20% as "investigate" and 30% as "act".
+
+*VP-of-Sales view: revenue never stopped growing, so revenue was never
+going to tell us. The ratio would have told us in 2020, two years before
+the margin did. It will also cry wolf about one time in four at that
+setting, so it starts a conversation; it doesn't trigger a restructuring
+on its own.*
 
 ---
 
-## C. Territory Optimizer
+## B. Coverage Model Simulator — which structure?
 
-**Output:** Optimized cost-to-serve **INR 38.21M** using 38 of 119 available
-reps, vs. naive equal-split cost-to-serve **INR 131.3M** using effectively
-the full pool (all reps get at least one account under round-robin) — a
-**70.9% cost improvement**, with identical 100% coverage in both cases.
-Per-region detail in `src/territory_optimizer.py` output; region R03
-(Maharashtra West, highest complexity concentration) needed the most
-activated reps (8 of 29 available).
+**Output** (₹M a year: payroll + travel + expertise risk + margin on
+uncovered accounts):
 
-**Insight to derive:** the naive baseline isn't a strawman by accident — it's
-the plan's own definition (spread accounts round-robin across every rep,
-cost-blind). What it exposes is that an *unplanned* territory split, even
-one that's demographically "fair," ends up needing 3x the headcount the
-account base actually requires. The 70.9% isn't "optimization found a
-clever trick" — it's "nobody had counted how many reps this book of
-business actually needs."
+| Structure | Reps | Payroll | Travel | Total | Complex accounts with a product expert |
+|---|---|---|---|---|---|
+| Geographic | 45 | 47.6 | 7.0 | **56.5** | 70% |
+| Segmented Hybrid | 45 | 47.6 | 7.6 | **56.5** | 72% |
+| Product Specialist | 53 | 56.6 | 18.1 | 76.8 | 100% |
 
-**Decision it enables:** a concrete target headcount by region (38 total,
-down from a pool of 119) that the org could staff toward, not just a
-structural principle. Note this assumes today's fixed 119-rep pool is a
-sunk allocation being re-optimized, not a hiring plan from zero.
+**Across 100 different generated account bases:** Geographic and Hybrid
+tie (within 1%) in 73% of them. Geographic is cheapest outright in 21% and
+Hybrid in 6%. Product Specialist never wins and costs about 29% more on
+average (₹71.6M vs ₹55.6M).
 
-**Business interpretation (VP-of-Sales voice):** *If we assigned today's
-book of business by what it actually needs, region by region, we'd need 38
-reps, not 119. That's not a claim that we should fire 81 people tomorrow —
-it's a number worth having before the next headcount conversation, because
-right now nobody can say with any precision how much slack is in the
-current split.*
+**Which inputs would change it.** Moving travel cost (0.5–2× base) and the
+margin lost on complex accounts served by a non-expert (0–100%):
+- Hybrid edges ahead when travel is at or below base cost and expertise
+  loss is 10% or more (and at 1.5× travel once loss reaches 75%).
+- Wherever either structure leads, the gap between them never exceeds 3%.
+- Product Specialist does not win anywhere in the grid.
 
----
+**Insight.** Once travel is priced, specialising by product across regions
+is the most expensive design by far. Travel time also eats selling hours,
+so it needs 8 more reps. The 2009 lesson still holds, but the fix is
+cheaper than a specialist force. Most regions already have reps with
+product backgrounds, so **matching accounts to those reps inside each
+region** recovers most of the expertise without the travel.
 
-## D. New-Product GTM Scorer
+**Decision it enables.** Stay geographic, but assign complex accounts to
+the in-region rep whose background matches the product. Re-test the
+specialist overlay if Haryana's complex-account revenue slips.
 
-**Output:** for the Dumb Waiter launch — buyer-persona distance **0.10**,
-technical-complexity distance **0.31**, deal-cycle diff **0.57** (assumed
-40-day cycle vs. a 92-day weighted average for the existing three lines).
-Weighted score **0.291** → **recommendation: existing sales force** (below
-the 0.5 pod threshold). Separately, breakeven for a 3-rep dedicated pod:
-**2.4 months**, given its assumed faster ramp.
-
-**Insight to derive:** the formula and the breakeven math point in
-different directions, and that's the real finding, not a contradiction to
-resolve away. The formula says the Dumb Waiter isn't different enough from
-the existing motion (technically or by buyer) to *justify* a pod. The
-breakeven math says *if* a pod were built anyway, it would pay for itself
-in under 3 months — because the deal cycle is so much shorter that even
-small revenue gets captured fast. Those are two different questions:
-"is this different enough to need a pod" vs. "would a pod pay off if built."
-
-**Decision it enables:** as scored, route the Dumb Waiter through the
-existing sales force rather than standing up a pod — but flag deal-cycle
-diff as the input doing the most work in this score (0.57, the largest of
-the three, and currently the least grounded in the dataset since it's an
-assumption table, not derived from actual sales-cycle records). If that
-assumption is wrong, the recommendation could flip.
-
-**Business interpretation (VP-of-Sales voice):** *On paper this product
-isn't different enough from what our reps already sell to justify a
-separate team — the buyer looks similar, the technical gap is modest. The
-one number pulling against that is how much faster this deal cycle should
-be, and that's an assumption, not a measurement. I'd want one quarter of
-real Dumb Waiter deal data before I'd bet the org design on this.*
+*VP-of-Sales view: the answer to Haryana isn't flying specialists around
+the country. It's making sure that inside Haryana, the conveyor accounts
+go to the conveyor people.*
 
 ---
 
-## Open items before Stage 3
+## C. Territory Optimizer — how many reps, and who owns what?
 
-1. **Module B's hybrid disadvantage** may be an artifact of the
-   `HYBRID_SPECIALIST_SHARE` and depth-metric definitions, not a real
-   finding about hybrid structures — worth a parameter sweep.
-2. **Module D's deal-cycle assumption** is the least-grounded input in the
-   whole build (no deal-cycle field in the synthetic data) — stated plainly
-   in code and here rather than dressed up as derived.
+The optimiser runs on Module B's recommendation (Geographic), with:
+- a 50–90% workload band for every kept rep
+- a charge for moving an account away from its current owner
+- the option to relocate a rep into a region that is short of capacity.
+
+| Method | Reps | Total cost ₹M | Accounts changing owner | Rep load range |
+|---|---|---|---|---|
+| As-is (today) | 56 | 68.0 | 0 | 5%–223% |
+| Greedy (fill cheapest first) | 47 | 57.6 | 558 | 5%–90% |
+| **Optimiser** | **45** | **55.5** | **247** | **51%–90%** |
+| Optimiser ignoring current owners | 45 | 55.3 | 551 | 53%–90% |
+
+**Findings.**
+- **The problem is distribution, not just size.** Haryana (121 of the 175
+  complex accounts) is short by 2 reps. Today one rep there carries 223% of
+  their selling hours. Tamil Nadu has 5 more reps than it needs, and
+  Maharashtra and Gujarat 3 each.
+- **The optimiser's real value is continuity, not cost.** It beats the
+  greedy rule by ₹2.1M a year (3.6%). It moves 247 accounts instead of
+  558, and leaves no rep with a token book. Ignoring current owners would
+  save another ₹0.3M at the price of 304 more account handovers.
+- **Headcount depends most on one assumption, selling hours per rep:**
+
+| Selling hours per rep per year | 750 | 850 | **990** | 1,100 | 1,200 |
+|---|---|---|---|---|---|
+| Reps needed | 56 (Haryana still short) | 51 | **45** | 40 | 38 |
+
+**Trade-off to flag.** At the base expertise-loss assumption (10%), the
+redesign lowers the share of complex accounts served by a product expert
+from 80% to 67%. Re-solved assuming 25% loss, it keeps 73% for ₹0.3M more
+a year.
+
+*VP-of-Sales view: we don't need 56 reps, and we don't need the same
+number in every region. Haryana needs two more and Tamil Nadu five fewer.
+Before committing to 45, I'd measure how many selling hours our reps
+really have, because that one number moves the answer by ±6 people.*
+
+---
+
+## D. New-Product GTM Scorer — how to sell the Dumb Waiter
+
+**Fit score: 0.52.** At or above 0.50, the product is a poor fit for the
+existing sales motion. The inputs, all from the data:
+
+| Input | Value | Basis |
+|---|---|---|
+| Buyer distance | 0.66 | No overlap in buyer type (builders, hotels and hospitals vs. industrial plants); different regional mix (0.32); tickets about a third the size (0.67) |
+| Complexity distance | 0.37 | Average complexity ~1.5 vs ~3.0 |
+| Deal-cycle distance | 0.50 | 46 vs 94 days |
+
+The score is borderline. Any one input falling to about 0.61 (buyer), 0.31
+(complexity) or 0.42 (deal cycle) would tip it to "fits". It says the
+existing motion is a questionable home; it does not say where else to go.
+
+**Economics** (24 months, gross margin after each option's own costs; base
+case):
+
+| Option | Accounts won | Contribution ₹M | Pays back vs. existing force |
+|---|---|---|---|
+| Existing sales force | 66 | 0.7 | — |
+| Dedicated pod (3 redeployed reps) | 127 | 0.5 | Not within 24 months |
+| **Channel partners** (lift dealers, 1 redeployed rep) | 86 | **1.7** | Month 12 |
+
+- **Pessimistic case:** channel partners still lead, though every option
+  loses money.
+- **Optimistic case:** the pod leads.
+- **Break-even:** the pod needs a **29%** win rate (25% assumed) to beat
+  partners.
+
+**Insight.** The pod wins the most accounts but loses on money. Dumb
+Waiter tickets average ₹166K, so three full salaries are hard to cover.
+Partners already sell to builders, and their cost scales with sales. "Pod
+or existing force" was the wrong question.
+
+**Decision it enables.** Take the Dumb Waiter out of the generalists' bag
+and sell it through about 8 lift dealers and installers, managed by one
+redeployed rep. Revisit the pod only if measured win rates come in above
+about 29%.
+
+*VP-of-Sales view: this is a small-ticket product sold to people our reps
+never call on. Dealers already have those relationships. We put one person
+on making them successful and keep our reps on the accounts that pay for
+them.*
+
+---
+
+## Economics — does the redesign pay?
+
+| | Today | Redesigned |
+|---|---|---|
+| Sales reps | 56 | 45 |
+| Cost to serve (payroll + travel) | ₹67.4M | ₹55.1M |
+| Cost to serve per account | ₹104K | ₹85K |
+| Cost to serve, % of revenue | 21.4% | 17.5% |
+| Revenue per rep | ₹5.6M | ₹7.0M |
+| Net margin (final year, after tax) | 1.2% | 4.1% |
+
+- **Saving:** ₹12.2M a year.
+- **One-time cost of the change:** ₹4.5M base (₹2.8M–₹8.6M). That covers
+  severance for 10 reps, 2 relocations, retraining, and margin lost on 247
+  handovers.
+- **Payback:** month 6 in the base case (release now or attrition), month
+  8–10 in the pessimistic case.
+
+Net margin recovers to 4.1%, not to its 2019 level of 11.6%, because the
+redesign fixes sales cost only. CAC, LTV and ROAS are not computed: the
+dataset has no marketing spend or retention data, and inventing them would
+be decoration.
+
+Rollout sequence, owners and post-rollout KPIs: `docs/rollout_plan.md`.
+
+## Open items
+
+1. Selling hours per rep and the expertise-loss rate drive the two biggest
+   answers. Both should be measured (visit logs; Haryana complex-account
+   revenue) before acting.
+2. The Dumb Waiter economics rest on assumed win rates and partner
+   volumes. Only the pilot account count (33) is data.
+3. Module A's false-alarm rate (24% at the chosen threshold) means it
+   should open a review, not decide one.

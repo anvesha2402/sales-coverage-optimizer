@@ -1,0 +1,5 @@
+method,reps_used,payroll_inr_m,travel_inr_m,expertise_risk_inr_m,uncovered_margin_inr_m,revenue_covered,complex_accounts_with_expert,utilisation_min,utilisation_max,reps_over_capacity,reps_under_half_loaded,accounts_moved,total_cost_inr_m,transfers_in,transfers_by_region,existing_reps_kept,existing_reps_freed,regions_short_of_capacity,solve_seconds,solver_status
+As-is (today),56,60.135784,7.2246,0.60556524,0.0,1.0,0.8,0.04848484848484848,2.225454545454545,16.0,28.0,0,67.96594924,,,,,,,
+Greedy (fill cheapest first),47,49.980571,7.2246,0.4135838400000001,0.0,1.0,0.6514285714285715,0.04848484848484848,0.8993939393939394,,,558,57.61875484,2.0,{'R02': 2},45.0,11.0,[],,
+Optimiser,45,47.890745,7.2246,0.422978,0.0,1.0,0.6742857142857143,0.5054545454545454,0.8969696969696969,,,247,55.538323,2.0,{'R02': 2},43.0,13.0,[],118.1,Optimal
+Optimiser (ignores current owners),45,47.710138,7.2246,0.34017396,0.0,1.0,0.7314285714285714,0.5284848484848483,0.8993939393939393,,,551,55.274911960000004,2.0,{'R02': 2},43.0,13.0,[],99.5,Optimal

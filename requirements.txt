@@ -1,6 +1,6 @@
-pandas
-numpy
-faker
-pulp
-streamlit
-plotly
+pandas>=2.2,<4
+numpy>=1.26,<3
+faker>=25,<41
+pulp>=2.8,<3.4
+streamlit>=1.40,<2
+plotly>=5.20,<8
